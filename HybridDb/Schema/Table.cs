@@ -28,6 +28,7 @@ namespace HybridDb.Schema
         public SystemColumn DocumentColumn { get; private set; }
         public object SizeColumn { get; private set; }
         public object CreatedAtColumn { get; private set; }
+        public object VersionColumn { get; private set; }
 
         public Column this[string name]
         {

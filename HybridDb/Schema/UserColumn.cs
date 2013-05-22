@@ -25,10 +25,13 @@ namespace HybridDb.Schema
 
     public class CollectionColumn : Column
     {
-        public CollectionColumn(string columnName)
+        public CollectionColumn(Table table, string columnName)
         {
             Name = columnName;
             SqlColumn = new SqlColumn(typeof(int));
+            Table = new Table(table.Name + "_" + columnName);
         }
+
+        public Table Table { get; set; }
     }
 }
