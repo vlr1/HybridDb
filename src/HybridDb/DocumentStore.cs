@@ -201,9 +201,9 @@ namespace HybridDb
                 throw new ConcurrencyException();
         }
 
-        public Guid Insert(Table table, Guid key, object projections)
+        public Guid Insert(DocumentTable table, Guid key, object document, object projections)
         {
-            return Execute(new InsertCommand(table, key, projections));
+            return Execute(new InsertCommand(table, key, document, projections));
         }
 
         public Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
@@ -241,7 +241,7 @@ namespace HybridDb
                 if (isWindowed)
                 {
                     sql.Append(@"with temp as (select *")
-                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
+                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "(select null)" : @orderby)
                        .Append("from {0}", FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(")")
@@ -341,7 +341,6 @@ namespace HybridDb
                 Interlocked.Increment(ref numberOfRequests);
 
             }
-            rows.ToList();
 
             return rows;
         }
@@ -365,7 +364,7 @@ namespace HybridDb
                                         "if @table is null select null where 1<>1;" +
 	                                    "declare @sql varchar(255) = 'select *, ' + quotename(@table, '''') + ' as TableReference from ' + quotename('{3}' + @table) + ' where {2} = ' + quotename(cast(@Id as varchar(36)), '''');" +
                                         "exec(@sql);",
-                                        indexTable.TableReferenceColumn.Name,
+                                        indexTable.DocumentTypeColumn.Name,
                                         FormatTableNameAndEscape(indexTable.Name),
                                         indexTable.IdColumn.Name,
                                         GetTablePrefix());

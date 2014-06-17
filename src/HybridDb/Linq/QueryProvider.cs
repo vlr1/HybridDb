@@ -66,7 +66,7 @@ namespace HybridDb.Linq
             {
                 var table = design != null
                                 ? (Table) design.Table
-                                : store.Configuration.TryGetIndexTableByType(typeof (TSourceElement));
+                                : store.Configuration.IndexTable;
 
                 QueryStats storeStats;
                 var results = store.Query<TProjection>(table,

@@ -13,9 +13,9 @@ namespace HybridDb
         public Configuration(IDocumentStore store)
         {
             Store = store;
-            
+
+            IndexTable = new IndexTable("Indexes");
             Tables = new ConcurrentDictionary<string, Table>();
-            IndexTables = new ConcurrentDictionary<Type, IndexTable>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
 
             Serializer = new DefaultBsonSerializer();
@@ -34,8 +34,8 @@ namespace HybridDb
         public ILogger Logger { get; private set; }
         public ISerializer Serializer { get; private set; }
 
+        public IndexTable IndexTable { get; private set; }
         public ConcurrentDictionary<string, Table> Tables { get; private set; }
-        public ConcurrentDictionary<Type, IndexTable> IndexTables { get; private set; }
         public ConcurrentDictionary<Type, DocumentDesign> DocumentDesigns { get; private set; }
 
         public static string GetColumnNameByConventionFor(Expression projector)
@@ -54,7 +54,7 @@ namespace HybridDb
         {
             tablename = tablename ?? GetTableNameByConventionFor<TEntity>();
             var table = new DocumentTable(tablename);
-            var design = new DocumentDesign<TEntity>(this, table);
+            var design = new DocumentDesign<TEntity>(this, IndexTable, table);
             
             Tables.TryAdd(tablename, design.Table);
             DocumentDesigns.TryAdd(design.Type, design);
@@ -87,35 +87,6 @@ namespace HybridDb
         public DocumentDesign TryGetDesignFor(string tablename)
         {
             return DocumentDesigns.Values.SingleOrDefault(x => x.Table.Name == tablename);
-        }
-
-        public IndexTable TryGetIndexTableByName(string tablename)
-        {
-            Table table;
-            return Tables.TryGetValue(tablename, out table) ? table as IndexTable : null;
-        }
-
-        public IndexTable TryGetIndexTableByType(Type type)
-        {
-            IndexTable table;
-            return IndexTables.TryGetValue(type, out table) ? table : null;
-        }
-
-        public IndexTable TryGetBestMatchingIndexTableFor<TDocument>() where TDocument : class
-        {
-            var designs = DocumentDesigns
-                .Where(x => x.Key.IsA<TDocument>())
-                .Select(x => x.Value)
-                .ToList();
-
-            var @groups = from design in designs
-                          from indexTable in design.Indexes.Keys
-                          group indexTable by indexTable
-                              into @group
-                              where @group.Count() == designs.Count
-                              select @group.First();
-
-            return @groups.FirstOrDefault();
         }
 
         public void UseSerializer(ISerializer serializer)

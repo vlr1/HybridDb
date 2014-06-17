@@ -20,7 +20,7 @@ namespace HybridDb
         void RegisterExtension(IHybridDbExtension hybridDbExtension);
         IDocumentSession OpenSession();
         Guid Execute(params DatabaseCommand[] commands);
-        Guid Insert(Table table, Guid key, object projections);
+        Guid Insert(DocumentTable table, Guid key, object document, object projections);
         Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false);
         void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false);
         IDictionary<string, object> Get(Table table, Guid key);

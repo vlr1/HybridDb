@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using HybridDb.Schema;
 
@@ -6,50 +7,53 @@ namespace HybridDb.Commands
 {
     public class InsertCommand : DatabaseCommand
     {
+        readonly DocumentTable documentTable;
         readonly Guid key;
+        readonly object document;
         readonly object projections;
-        readonly Table table;
 
-        public InsertCommand(Table table, Guid key, object projections)
+        public InsertCommand(DocumentTable documentTable, Guid key, object document, object projections)
         {
-            this.table = table;
+            this.documentTable = documentTable;
             this.key = key;
+            this.document = document;
             this.projections = projections;
         }
 
         internal override PreparedDatabaseCommand Prepare(DocumentStore store, Guid etag, int uniqueParameterIdentifier)
         {
-            var values = ConvertAnonymousToProjections(table, projections);
+            var documentColumns = new Dictionary<Column, object>();
+            documentColumns[documentTable.IdColumn] = key;
+            documentColumns[documentTable.EtagColumn] = etag;
+            documentColumns[documentTable.CreatedAtColumn] = DateTimeOffset.Now;
+            documentColumns[documentTable.ModifiedAtColumn] = DateTimeOffset.Now;
+            documentColumns[documentTable.DocumentColumn] = store.Configuration.Serializer.Serialize(document);
 
-            values[table.IdColumn] = key;
-            values[table.EtagColumn] = etag;
-            values[table.CreatedAtColumn] = DateTimeOffset.Now;
-            values[table.ModifiedAtColumn] = DateTimeOffset.Now;
+            var sql = string.Format("insert into {0} ({1}) values ({2}); set @rowcount = @rowcount + @@ROWCOUNT;",
+                store.FormatTableNameAndEscape(documentTable.Name),
+                string.Join(", ", from column in documentColumns.Keys select column.Name),
+                string.Join(", ", from column in documentColumns.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
-            var sql = string.Format("insert into {0} ({1}) values ({2});",
-                store.FormatTableNameAndEscape(table.Name),
-                string.Join(", ", from column in values.Keys select column.Name),
-                string.Join(", ", from column in values.Keys select "@" + column.Name + uniqueParameterIdentifier));
 
-            //var collectionProjections = values.Where(x => x.Key is CollectionColumn)
-            //                                  .ToDictionary(x => (CollectionColumn) x.Key, x => x.Value);
+            var parameters = MapProjectionsToParameters(documentColumns, uniqueParameterIdentifier.ToString());
 
-            //foreach (var collectionProjection in collectionProjections)
-            //{
-            //    var projectionTable = collectionProjection.Key.Table;
+            var indexTable = store.Configuration.IndexTable;
+            var projectionsAsDictionary = projections as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(projections);
+            foreach (var projection in projectionsAsDictionary)
+            {
+                var indexColumns = new Dictionary<Column, object>();
+                indexColumns[indexTable.DocumentIdColumn] = key;
+                indexColumns[indexTable.DocumentTypeColumn] = documentTable.Name;
+                indexColumns[indexTable.PropertyColumn] = projection.Key;
+                indexColumns[indexTable.StringValueColumn] = projection.Value;
 
-            //    var blahs = new Dictionary<Column, object> { { collectionProjection.Key, collectionProjection.Value } };
+                sql += string.Format("insert into {0} ({1}) values ({2});",
+                    store.FormatTableNameAndEscape(indexTable.Name),
+                    string.Join(", ", from column in documentColumns.Keys select column.Name),
+                    string.Join(", ", from column in documentColumns.Keys select "@" + column.Name + projection.Key + uniqueParameterIdentifier));
 
-            //    blahs.Add(projectionTable.DocumentIdColumn, key);
-            //    //blahs.Add(projectionTable.DocumentColumn, document);
-
-            //    //sql += string.Format("insert into {0} ({1}) values ({2});",
-            //    //                     store.Escape(store.GetFormattedTableName(projectionTable)),
-            //    //                     string.Join(", ", from column in blahs.Keys select column.Name),
-            //    //                     string.Join(", ", from column in blahs.Keys select "@" + column.Name + uniqueParameterIdentifier));
-            //}
-
-            var parameters = MapProjectionsToParameters(values, uniqueParameterIdentifier);
+                parameters = MapProjectionsToParameters(documentColumns, projection.Key + uniqueParameterIdentifier);
+            }
 
             return new PreparedDatabaseCommand
             {

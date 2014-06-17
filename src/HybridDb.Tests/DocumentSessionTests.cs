@@ -17,7 +17,6 @@ namespace HybridDb.Tests
         public DocumentSessionTests()
         {
             store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True;");
-            //store = new DocumentStore("data source=.;Integrated Security=True;Initial Catalog=Test");
             store.Configuration.UseSerializer(new DefaultJsonSerializer());
         }
 
@@ -592,7 +591,9 @@ namespace HybridDb.Tests
         [Fact]
         public void QueryingALoadedDocumentMarkedForDeletionReturnsNothing()
         {
-            store.Document<Entity>().Project(x => x.ProjectedProperty).MigrateSchema();
+            store.Document<Entity>()
+                .Project(x => x.ProjectedProperty)
+                .MigrateSchema();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
@@ -613,7 +614,10 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryAndReturnProjection()
         {
-            store.Document<Entity>().Project(x => x.ProjectedProperty).Project(x => x.TheChild.NestedProperty).MigrateSchema();
+            store.Document<Entity>()
+                .Project(x => x.ProjectedProperty)
+                .Project(x => x.TheChild.NestedProperty)
+                .MigrateSchema();
 
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())

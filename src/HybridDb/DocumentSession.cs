@@ -43,14 +43,12 @@ namespace HybridDb
             }
             else
             {
-                var index = store.Configuration.TryGetBestMatchingIndexTableFor<T>();
-                if (index == null)
-                    throw new InvalidOperationException(string.Format("No document type or index supporting {0} was found.", typeof(T)));
+                var index = store.Configuration.IndexTable;
 
                 var row = store.Get(index, key);
                 if (row == null) return null;
 
-                design = store.Configuration.TryGetDesignFor((string)row[index.TableReferenceColumn]);
+                design = store.Configuration.TryGetDesignFor((string)row[index.DocumentTypeColumn]);
 
                 return (T)ConvertToEntityAndPutUnderManagement(design, row);
             }
@@ -142,27 +140,16 @@ namespace HybridDb
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, projections)));
-                        commands.AddRange(design.Indexes.Select(index =>
-                        {
-                            var indexProjections = index.Value.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
-                            return Tuple.Create(managedEntity, document, (DatabaseCommand) new InsertCommand(index.Key, id, indexProjections));
-                        }));
+                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, managedEntity, projections)));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))
                         {
                             commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand) new UpdateCommand(design.Table, id, managedEntity.Etag, projections, lastWriteWins)));
-                            commands.AddRange(design.Indexes.Select(index =>
-                            {
-                                var indexProjections = index.Value.ToDictionary(x => x.Key, x => x.Value(managedEntity.Entity));
-                                return Tuple.Create(managedEntity, document, (DatabaseCommand)new UpdateCommand(index.Key, id, managedEntity.Etag, indexProjections, lastWriteWins));
-                            }));
                         }
                         break;
                     case EntityState.Deleted:
                         commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(design.Table, id, managedEntity.Etag, lastWriteWins)));
-                        commands.AddRange(design.Indexes.Select(index => Tuple.Create(managedEntity, document, (DatabaseCommand)new DeleteCommand(index.Key, id, managedEntity.Etag, lastWriteWins))));
                         break;
                 }
             }

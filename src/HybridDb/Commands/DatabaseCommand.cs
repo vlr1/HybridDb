@@ -19,13 +19,18 @@ namespace HybridDb.Commands
                     select new KeyValuePair<Column, object>(column, projection.Value)).ToDictionary();
         }
 
-        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int i)
+        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, int postfix)
+        {
+            return MapProjectionsToParameters(projections, postfix.ToString());
+        }
+
+        protected static Dictionary<string, Parameter> MapProjectionsToParameters(IDictionary<Column, object> projections, string postfix)
         {
             var parameters = new Dictionary<string, Parameter>();
             foreach (var projection in projections)
             {
                 var column = projection.Key;
-                AddTo(parameters, "@" + column.Name + i, projection.Value, column.SqlColumn.Type, column.SqlColumn.Length);
+                AddTo(parameters, "@" + column.Name + postfix, projection.Value, column.SqlColumn.Type, column.SqlColumn.Length);
             }
 
             return parameters;

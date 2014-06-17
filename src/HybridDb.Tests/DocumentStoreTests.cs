@@ -14,11 +14,13 @@ namespace HybridDb.Tests
     {
         readonly DocumentStore store;
         readonly byte[] documentAsByteArray;
+        readonly object document;
 
         public DocumentStoreTests()
         {
-            store = DocumentStore.ForTestingWithTempTables("data source=.;Integrated Security=True");
+            store = new DocumentStore("data source=.;Integrated Security=True");
             documentAsByteArray = new[] {(byte) 'a', (byte) 's', (byte) 'g', (byte) 'e', (byte) 'r'};
+            document = new { Prop = "asger" };
         }
 
         public void Dispose()
@@ -32,14 +34,19 @@ namespace HybridDb.Tests
             store.Document<Entity>().Project(x => x.Field).MigrateSchema();
 
             var id = Guid.NewGuid();
-            var table = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(table.Table, id, new {Field = "Asger", Document = documentAsByteArray});
+            var design = store.Configuration.GetDesignFor<Entity>();
+            store.Insert(design.Table, id, document, new {Field = "Asger"});
 
-            var row = store.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid) row.Id).ShouldBe(id);
-            ((Guid) row.Etag).ShouldNotBe(Guid.Empty);
-            Encoding.ASCII.GetString((byte[]) row.Document).ShouldBe("asger");
-            ((string) row.Field).ShouldBe("Asger");
+            var doc = store.RawQuery<dynamic>("select * from #Entities").Single();
+            ((Guid) doc.Id).ShouldBe(id);
+            ((Guid) doc.Etag).ShouldNotBe(Guid.Empty);
+            Encoding.ASCII.GetString((byte[]) doc.Document).ShouldBe("asger");
+
+            var index = store.RawQuery<dynamic>("select * from #Indexes").Single();
+            ((Guid) index.DocumentId).ShouldBe(id);
+            ((string) index.DocumentType).ShouldBe("Entities");
+            ((string) index.Property).ShouldBe("Field");
+            ((string) index.StringValue).ShouldBe("Asger");
         }
 
         [Fact]

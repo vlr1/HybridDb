@@ -116,6 +116,7 @@
     <Compile Include="Schema\DocumentDesign.cs" />
     <Compile Include="NullCheckInjector.cs" />
     <Compile Include="Schema\DocumentTable.cs" />
+    <Compile Include="Schema\DynamicTable.cs" />
     <Compile Include="Schema\IndexTable.cs" />
     <Compile Include="Schema\SqlColumn.cs" />
     <Compile Include="Logging\ConsoleLogger.cs" />
