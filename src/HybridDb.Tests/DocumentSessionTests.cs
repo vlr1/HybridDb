@@ -89,7 +89,7 @@ namespace HybridDb.Tests
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                session.Advanced.Defer(new InsertCommand(table.Table, id, new{}));
+                session.Advanced.Defer(new InsertCommand(table.Table, id, new byte[0], new{}));
                 store.NumberOfRequests.ShouldBe(0);
                 session.SaveChanges();
                 store.NumberOfRequests.ShouldBe(1);
@@ -662,8 +662,7 @@ namespace HybridDb.Tests
         [Fact]
         public void SavesTableReferenceToIndex()
         {
-            store.Document<Entity>().Index<OtherEntityIndex>();
-            store.Document<OtherEntity>().Index<OtherEntityIndex>();
+            store.Document<Entity>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -675,18 +674,18 @@ namespace HybridDb.Tests
                 session.SaveChanges();
                 session.Advanced.Clear();
 
-                var entities = store.RawQuery<dynamic>("select Id, TableReference from #OtherEntityIndex order by Number").ToList();
+                var entities = store.RawQuery<dynamic>("select Id, DocumentType from #Indexes order by Number").ToList();
                 Assert.Equal(id, entities[0].Id);
-                Assert.Equal("Entities", entities[0].TableReference);
+                Assert.Equal("Entities", entities[0].DocumentType);
                 Assert.Equal(id2, entities[1].Id);
-                Assert.Equal("OtherEntities", entities[1].TableReference);
+                Assert.Equal("OtherEntities", entities[1].DocumentType);
             }
         }
 
         [Fact]
         public void InsertsInIndexes()
         {
-            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.Document<Entity>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -695,11 +694,11 @@ namespace HybridDb.Tests
                 session.Store(new Entity { Id = id, Number = 1, Property = "Asger" });
                 session.SaveChanges();
 
-                var index1 = store.RawQuery<dynamic>("select * from #EntityIndex").ToList();
+                var index1 = store.RawQuery<dynamic>("select * from #Indexes").ToList();
                 Assert.Equal(id, index1[0].Id);
                 Assert.Equal("Asger", index1[0].Property);
 
-                var index2 = store.RawQuery<dynamic>("select * from #OtherEntityIndex").ToList();
+                var index2 = store.RawQuery<dynamic>("select * from #Indexes").ToList();
                 Assert.Equal(id, index2[0].Id);
                 Assert.Equal(1, index2[0].Number);
             }
@@ -708,7 +707,7 @@ namespace HybridDb.Tests
         [Fact]
         public void UpdatesIndexes()
         {
-            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.Document<Entity>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -736,7 +735,7 @@ namespace HybridDb.Tests
         [Fact]
         public void DeletesFromIndexes()
         {
-            store.Document<Entity>().Index<EntityIndex>().Index<OtherEntityIndex>();
+            store.Document<Entity>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -761,8 +760,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanLoadByBestMatchingIndex()
         {
-            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
-            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity1>();
+            store.Document<MoreDerivedEntity2>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -780,8 +779,8 @@ namespace HybridDb.Tests
         [Fact]
         public void LoadCanReturnNullFromIndex()
         {
-            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
-            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity1>();
+            store.Document<MoreDerivedEntity2>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -795,8 +794,8 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryIndex()
         {
-            store.Document<MoreDerivedEntity1>().Index<EntityIndex>();
-            store.Document<MoreDerivedEntity2>().Index<EntityIndex>();
+            store.Document<MoreDerivedEntity1>();
+            store.Document<MoreDerivedEntity2>();
             store.MigrateSchemaToMatchConfiguration();
 
             using (var session = store.OpenSession())
@@ -814,7 +813,7 @@ namespace HybridDb.Tests
         [Fact]
         public void FailsWhenNonNullableIndexPropertyNameIsNotPresentOnDocument()
         {
-            store.Document<OtherEntity>().Index<BadMatchIndex>();
+            //store.Document<OtherEntity>().Index<BadMatchIndex>();
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();
@@ -828,7 +827,7 @@ namespace HybridDb.Tests
         [Fact]
         public void DoesNotFailWhenIndexPropertyNameIsNotPresentOnDocumentButHasOverride()
         {
-            store.Document<OtherEntity>().Index<BadMatchIndex>().With(x => x.BadMatch, x => 10);
+            //store.Document<OtherEntity>().Index<BadMatchIndex>().With(x => x.BadMatch, x => 10);
             store.MigrateSchemaToMatchConfiguration();
 
             var id = Guid.NewGuid();

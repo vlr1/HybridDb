@@ -14,19 +14,13 @@ namespace HybridDb
         {
             Store = store;
 
-            IndexTable = new IndexTable("Indexes");
             Tables = new ConcurrentDictionary<string, Table>();
             DocumentDesigns = new ConcurrentDictionary<Type, DocumentDesign>();
-
             Serializer = new DefaultBsonSerializer();
             Logger = new ConsoleLogger(LogLevel.Info, new LoggingColors());
 
-            var metadata = new Table("HybridDb");
-            metadata.Register(new Column("Table", new SqlColumn(DbType.AnsiStringFixedLength, 255)));
-            metadata.Register(new Column("SchemaVersion", new SqlColumn(DbType.Int32)));
-            metadata.Register(new Column("DocumentVersion", new SqlColumn(DbType.Int32)));
-
-            Tables.TryAdd(metadata.Name, metadata);
+            IndexTable = new IndexTable("Indexes");
+            Tables.TryAdd(IndexTable.Name, IndexTable);
         }
 
         public IDocumentStore Store { get; set; }

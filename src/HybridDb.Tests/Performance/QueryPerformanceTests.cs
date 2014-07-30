@@ -80,7 +80,7 @@ namespace HybridDb.Tests.Performance
                 for (int i = 0; i < 10000; i++)
                 {
                     commands.Add(new InsertCommand(store.Configuration.GetDesignFor<Entity>().Table,
-                                                   Guid.NewGuid(),
+                                                   Guid.NewGuid(), new byte[0], 
                                                    new { SomeNumber = i, SomeData = "ABC" }));
                 }
 

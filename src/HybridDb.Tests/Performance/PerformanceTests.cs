@@ -132,7 +132,7 @@ namespace HybridDb.Tests.Performance
             {
                 using (var store = DocumentStore.ForTestingWithTempTables())
                 {
-                    store.Document<Entity>().Project(x => x.SomeData).Project(x => x.SomeNumber);
+                    store.Document<Entity>();
                     store.MigrateSchemaToMatchConfiguration();
 
                     var commands = new List<DatabaseCommand>();
@@ -140,7 +140,7 @@ namespace HybridDb.Tests.Performance
                     {
                         commands.Add(new InsertCommand(
                                          store.Configuration.GetDesignFor<Entity>().Table,
-                                         Guid.NewGuid(),
+                                         Guid.NewGuid(), new byte[0],
                                          new { SomeNumber = i, SomeData = "ABC" }));
                     }
 

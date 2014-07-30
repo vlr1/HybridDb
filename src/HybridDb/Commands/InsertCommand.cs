@@ -9,10 +9,10 @@ namespace HybridDb.Commands
     {
         readonly DocumentTable documentTable;
         readonly Guid key;
-        readonly object document;
+        readonly byte[] document;
         readonly object projections;
 
-        public InsertCommand(DocumentTable documentTable, Guid key, object document, object projections)
+        public InsertCommand(DocumentTable documentTable, Guid key, byte[] document, object projections)
         {
             this.documentTable = documentTable;
             this.key = key;
@@ -27,13 +27,12 @@ namespace HybridDb.Commands
             documentColumns[documentTable.EtagColumn] = etag;
             documentColumns[documentTable.CreatedAtColumn] = DateTimeOffset.Now;
             documentColumns[documentTable.ModifiedAtColumn] = DateTimeOffset.Now;
-            documentColumns[documentTable.DocumentColumn] = store.Configuration.Serializer.Serialize(document);
+            documentColumns[documentTable.DocumentColumn] = document;
 
             var sql = string.Format("insert into {0} ({1}) values ({2}); set @rowcount = @rowcount + @@ROWCOUNT;",
                 store.FormatTableNameAndEscape(documentTable.Name),
                 string.Join(", ", from column in documentColumns.Keys select column.Name),
                 string.Join(", ", from column in documentColumns.Keys select "@" + column.Name + uniqueParameterIdentifier));
-
 
             var parameters = MapProjectionsToParameters(documentColumns, uniqueParameterIdentifier.ToString());
 
@@ -49,10 +48,10 @@ namespace HybridDb.Commands
 
                 sql += string.Format("insert into {0} ({1}) values ({2});",
                     store.FormatTableNameAndEscape(indexTable.Name),
-                    string.Join(", ", from column in documentColumns.Keys select column.Name),
-                    string.Join(", ", from column in documentColumns.Keys select "@" + column.Name + projection.Key + uniqueParameterIdentifier));
+                    string.Join(", ", from column in indexColumns.Keys select column.Name),
+                    string.Join(", ", from column in indexColumns.Keys select "@" + column.Name + projection.Key + uniqueParameterIdentifier));
 
-                parameters = MapProjectionsToParameters(documentColumns, projection.Key + uniqueParameterIdentifier);
+                parameters = parameters.Concat(MapProjectionsToParameters(indexColumns, projection.Key + uniqueParameterIdentifier)).ToDictionary();
             }
 
             return new PreparedDatabaseCommand

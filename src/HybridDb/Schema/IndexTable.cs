@@ -7,7 +7,7 @@ namespace HybridDb.Schema
     {
         public IndexTable(string name) : base(name)
         {
-            DocumentIdColumn = new SystemColumn("DocumentId", new SqlColumn(DbType.String, 255));
+            DocumentIdColumn = new SystemColumn("DocumentId", new SqlColumn(DbType.Guid));
             Register(DocumentIdColumn);
 
             DocumentTypeColumn = new SystemColumn("DocumentType", new SqlColumn(DbType.String, 255));

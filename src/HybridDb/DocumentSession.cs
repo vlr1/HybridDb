@@ -140,7 +140,7 @@ namespace HybridDb
                 switch (managedEntity.State)
                 {
                     case EntityState.Transient:
-                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, managedEntity, projections)));
+                        commands.Add(Tuple.Create(managedEntity, document, (DatabaseCommand)new InsertCommand(design.Table, id, document, projections)));
                         break;
                     case EntityState.Loaded:
                         if (!managedEntity.Document.SequenceEqual(document))

@@ -136,7 +136,7 @@ namespace HybridDb
             {
                 var i = 0;
                 var etag = Guid.NewGuid();
-                var sql = "";
+                var sql = "declare @rowcount int = 0;";
                 var parameters = new List<Parameter>();
                 var numberOfParameters = 0;
                 var expectedRowCount = 0;
@@ -177,6 +177,8 @@ namespace HybridDb
                     parameters.AddRange(preparedCommand.Parameters);
                 }
 
+                sql += "select @rowcount;";
+
                 InternalExecute(connectionManager, sql, parameters, expectedRowCount);
 
                 connectionManager.Complete();
@@ -195,25 +197,25 @@ namespace HybridDb
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
             var fastParameters = new FastDynamicParameters(parameters);
-            var rowcount = managedConnection.Connection.Execute(sql, fastParameters);
+            var rowcount = managedConnection.Connection.Query<int>(sql, fastParameters).First();
             Interlocked.Increment(ref numberOfRequests);
             if (rowcount != expectedRowCount)
                 throw new ConcurrencyException();
         }
 
-        public Guid Insert(DocumentTable table, Guid key, object document, object projections)
+        public Guid Insert(DocumentTable table, Guid key, byte[] document, object projections)
         {
             return Execute(new InsertCommand(table, key, document, projections));
         }
 
         public Guid Update(Table table, Guid key, Guid etag, object projections, bool lastWriteWins = false)
         {
-            return Execute(new UpdateCommand(table, key, etag, projections, lastWriteWins));
+            return Execute(new UpdateCommand((DocumentTable) table, key, etag, projections, lastWriteWins));
         }
 
         public void Delete(Table table, Guid key, Guid etag, bool lastWriteWins = false)
         {
-            Execute(new DeleteCommand(table, key, etag, lastWriteWins));
+            Execute(new DeleteCommand((DocumentTable) table, key, etag, lastWriteWins));
         }
 
         public IEnumerable<TProjection> Query<TProjection>(Table table, out QueryStats stats, string select = null, string where = "",
@@ -366,14 +368,15 @@ namespace HybridDb
                                         "exec(@sql);",
                                         indexTable.DocumentTypeColumn.Name,
                                         FormatTableNameAndEscape(indexTable.Name),
-                                        indexTable.IdColumn.Name,
+                                        indexTable.DocumentIdColumn.Name,
                                         GetTablePrefix());
                 }
                 else
                 {
+                    var documentTable = (DocumentTable)table;
                     sql = string.Format("select * from {0} where {1} = @Id",
-                                        FormatTableNameAndEscape(table.Name),
-                                        table.IdColumn.Name);
+                                        FormatTableNameAndEscape(documentTable.Name),
+                                        documentTable.IdColumn.Name);
                 }
 
 

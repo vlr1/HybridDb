@@ -10,9 +10,9 @@ namespace HybridDb.Commands
         protected readonly Guid key;
         protected readonly object projections;
         protected readonly bool lastWriteWins;
-        protected readonly Table table;
+        protected readonly DocumentTable table;
 
-        public UpdateCommand(Table table, Guid key, Guid etag, object projections, bool lastWriteWins)
+        public UpdateCommand(DocumentTable table, Guid key, Guid etag, object projections, bool lastWriteWins)
         {
             this.table = table;
             this.key = key;

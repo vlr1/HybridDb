@@ -22,7 +22,7 @@ namespace HybridDb.Schema
 
         public void MigrateSchema()
         {
-            Configuration.Store.Migrate(migrator => migrator.MigrateTo(Table));
+            Configuration.Store.MigrateSchemaToMatchConfiguration();
         }
 
         protected Func<object, object> Compile<TEntity, TMember>(string name, Expression<Func<TEntity, TMember>> projector)
