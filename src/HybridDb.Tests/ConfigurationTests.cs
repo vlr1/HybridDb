@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlTypes;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -63,6 +64,25 @@ namespace HybridDb.Tests
         {
             configuration.Document<Entity>().With(x => x.Strings.Where(y => y.PadLeft(2).Length > 10));
             ProjectionsFor<Entity>().ShouldContainKey("StringsWherePadLeft2LengthGreaterThan10");
+        }
+
+        [Fact]
+        public void CanGetColumnNameForSelf()
+        {
+            configuration.Document<Entity>().With(x => x);
+            ProjectionsFor<Entity>().ShouldContainKey("Self");
+        }
+
+        [Fact]
+        public void ProjectComplexObjectAsXml()
+        {
+            configuration.Document<Entity>().With(x => x);
+
+            var projection = ProjectionsFor<Entity>()["Self"];
+            projection.ReturnType.ShouldBe(typeof(Entity));
+            projection.Projector(new Entity());
+
+            TableFor<Entity>()["Self"].Type.ShouldBe(typeof(SqlXml));
         }
 
         [Fact]

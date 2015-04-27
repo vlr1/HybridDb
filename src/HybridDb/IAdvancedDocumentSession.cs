@@ -4,7 +4,7 @@ using HybridDb.Commands;
 
 namespace HybridDb
 {
-    public interface IAdvancedDocumentSessionCommands
+    public interface IAdvancedDocumentSession
     {
         void Clear();
         bool IsLoaded(Guid id);

@@ -10,6 +10,6 @@ namespace HybridDb
         void Store(object entity);
         void Delete(object entity);
         void SaveChanges();
-        IAdvancedDocumentSessionCommands Advanced { get; }
+        IAdvancedDocumentSession Advanced { get; }
     }
 }

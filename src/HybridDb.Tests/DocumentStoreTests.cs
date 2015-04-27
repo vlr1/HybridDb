@@ -64,15 +64,6 @@ namespace HybridDb.Tests
             ((string) row.Field).ShouldBe(null);
         }
 
-        [Fact(Skip = "This will fail on first insert now, but we might want to check it at configuration time, but only if other stores do not support either.")]
-        public void FailsOnSettingUpComplexProjections()
-        {
-            Should.Throw<ArgumentException>(() =>
-            {
-                Document<Entity>().With(x => x.Complex);
-            });
-        }
-
         [Fact]
         public void FailsOnDynamicallyInsertedComplexProjections()
         {
@@ -828,6 +819,60 @@ namespace HybridDb.Tests
             Document<OtherEntityWithSomeSimilarities>().With(x => x.Property);
         }
 
+        [Fact]
+        public void CanInsertObjectProjectionsAsXml()
+        {
+            Document<Entity>().With(x => x.Complex);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, Guid.NewGuid(), new
+            {
+                Complex = new Entity.ComplexType
+                {
+                    A = "Emil",
+                    B = 2
+                }
+            });
+
+            QueryStats stats;
+            var row = store.Query(table, out stats, "Complex.value('(/ComplexType/A)[1]', 'varchar(max)') as Hallo").Single();
+            row["Hallo"].ShouldBe("Emil");
+        }
+
+        [Fact]
+        public void CanUpdateObjectProjectionsAsXml()
+        {
+            Document<Entity>().With(x => x.Complex);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            var id = Guid.NewGuid();
+            var etag = store.Insert(table, id, new
+            {
+                Complex = new Entity.ComplexType
+                {
+                    A = "Emil"
+                }
+            });
+
+            store.Update(table, id, etag, new
+            {
+                Complex = new List<string>
+                {
+                    "Asger",
+                    "Emil"
+                }
+            });
+
+            QueryStats stats;
+            var rows = store
+                .Query(
+                    table, out stats,
+                    where: "Complex.exist('/ArrayOfString/string/text()[. = sql:variable(\"@Name\")]') = 1",
+                    parameters: new { Name = "Asger" })
+                .ToList();
+            
+            rows.Count.ShouldBe(1);
+        }
 
         public class Case
         {

@@ -8,7 +8,7 @@ using HybridDb.Migrations;
 
 namespace HybridDb
 {
-    public class DocumentSession : IDocumentSession, IAdvancedDocumentSessionCommands
+    public class DocumentSession : IDocumentSession, IAdvancedDocumentSession
     {
         readonly Dictionary<Guid, ManagedEntity> entities;
         readonly IDocumentStore store;
@@ -25,7 +25,7 @@ namespace HybridDb
             this.store = store;
         }
 
-        public IAdvancedDocumentSessionCommands Advanced
+        public IAdvancedDocumentSession Advanced
         {
             get { return this; }
         }

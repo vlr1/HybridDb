@@ -18,7 +18,8 @@ namespace HybridDb
         {
             var columnNameBuilder = new ColumnNameBuilder();
             columnNameBuilder.Visit(projector);
-            return columnNameBuilder.ColumnName;
+
+            return columnNameBuilder.ColumnName != "" ? columnNameBuilder.ColumnName : "Self";
         }
 
         protected override Expression VisitBinary(BinaryExpression node)

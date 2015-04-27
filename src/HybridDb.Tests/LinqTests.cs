@@ -604,6 +604,15 @@ namespace HybridDb.Tests
             translation.OrderBy.ShouldBe("SomeColumn");
         }
 
+        [Fact]
+        public void FactMethodName()
+        {
+            var translation = Query<Entity>().Where(x => x.Children.Any(y => y.NestedString == "Asger")).Translate();
+
+            translation.Where.ShouldBe("(Children.exist() = 1)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", "Asger");
+        }
+
         Query<T> Query<T>() where T : class
         {
             var store = DocumentStore.ForTesting(TableMode.UseTempTables);
@@ -636,6 +645,7 @@ namespace HybridDb.Tests
             public class Child
             {
                 public double NestedProperty { get; set; }
+                public string NestedString { get; set; }
             }
         }
 

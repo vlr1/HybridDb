@@ -29,13 +29,13 @@ namespace HybridDb.Config
                 new SqlTypeMapping(typeof (TimeSpan), DbType.Time, "time"),
                 new SqlTypeMapping(typeof (byte), DbType.Byte, "tinyint"),
                 new SqlTypeMapping(typeof (Guid), DbType.Guid, "uniqueidentifier"),
-                new SqlTypeMapping(typeof (string), DbType.Xml, "xml")
+                new SqlTypeMapping(typeof (object), DbType.Xml, "xml")
             };          
         }       
 
         public static IEnumerable<SqlTypeMapping> ForNetType(Type type)
         {
-            return sqlTypeMappings.Where(x => x.NetType == type);
+            return sqlTypeMappings.Where(x => x.NetType.IsAssignableFrom(type));
         }
 
         public static IEnumerable<SqlTypeMapping> ForDbType(DbType type)
@@ -50,9 +50,6 @@ namespace HybridDb.Config
 
         public static SqlColumn Convert(Column column)
         {
-            if (!ForNetType(column.Type).Any())
-                throw new ArgumentException("Can only project .NET simple types, Guid, DateTime, DateTimeOffset, TimeSpan and byte[].");
-            
             return new SqlColumn(ForNetType(column.Type).First().DbType, GetLength(column));
         }
 

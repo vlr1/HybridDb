@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlTypes;
+using System.IO;
 using System.Linq;
+using System.Xml;
+using System.Xml.Serialization;
 using HybridDb.Config;
 
 namespace HybridDb.Commands
@@ -34,6 +38,14 @@ namespace HybridDb.Commands
 
         public static void AddTo(Dictionary<string, Parameter> parameters, string name, object value, DbType? dbType, int? size)
         {
+            if (dbType.Value == DbType.Xml)
+            {
+                var ms = new MemoryStream();
+                var writer = XmlWriter.Create(ms);
+                new XmlSerializer(value.GetType()).Serialize(writer, value);
+                value = new SqlXml(ms);
+            }
+
             parameters[name] = new Parameter {Name = name, Value = value, DbType = dbType, Size = size};
         }
 
