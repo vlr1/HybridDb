@@ -810,7 +810,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Complex);
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            store.Insert(table, Guid.NewGuid(), new
+            store.Insert(table, NewId(), new
             {
                 Complex = new Entity.ComplexType
                 {
@@ -831,7 +831,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Children);
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            store.Insert(table, Guid.NewGuid(), new
+            store.Insert(table, NewId(), new
             {
                 Children = new List<object>
                 {
@@ -861,7 +861,7 @@ namespace HybridDb.Tests
             Document<Entity>().With(x => x.Complex);
 
             var table = store.Configuration.GetDesignFor<Entity>().Table;
-            var id = Guid.NewGuid();
+            var id = NewId();
             var etag = store.Insert(table, id, new
             {
                 Complex = new Entity.ComplexType

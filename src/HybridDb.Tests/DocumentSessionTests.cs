@@ -1148,6 +1148,8 @@ namespace HybridDb.Tests
             }
         }
 
+        [Fact]
+        public void CanQueryList()
         {
             Document<Entity>().With(x => x.Children);
 
@@ -1155,7 +1157,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity
                 {
-                    Id = id,
+                    Id = NewId(),
                     Children =
                     {
                         new Entity.Child {NestedProperty = "A"},
@@ -1188,7 +1190,7 @@ namespace HybridDb.Tests
             {
                 session.Store(new Entity
                 {
-                    Id = id,
+                    Id = NewId(),
                     Complex = new Entity.ComplexType
                     {
                         A = "Mogens",

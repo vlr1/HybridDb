@@ -82,6 +82,7 @@
     <Compile Include="Bugs\NotGeneratingNullableColumnsForNullableTypes.cs" />
     <Compile Include="Config\ColumnTests.cs" />
     <Compile Include="Config\SqlTypeMapTests.cs" />
+    <Compile Include="DefaultJsonToXmlConverterTests.cs" />
     <Compile Include="DefaultSerializerTests.cs" />
     <Compile Include="DocumentMigratorTests.cs" />
     <Compile Include="FakeBackupWriter.cs" />
@@ -89,7 +90,6 @@
     <Compile Include="HybridDbTests.cs" />
     <Compile Include="InlineMigration.cs" />
     <Compile Include="InterceptingDocumentStoreDecorator.cs" />
-    <Compile Include="JsonToXmlConverterTests.cs" />
     <Compile Include="Migrations\Commands\AddColumnTests.cs" />
     <Compile Include="Migrations\Commands\CreateTableTests.cs" />
     <Compile Include="Migrations\Commands\RemoveColumnTests.cs" />

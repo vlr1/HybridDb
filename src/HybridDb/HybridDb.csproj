@@ -78,6 +78,7 @@
     <Compile Include="Config\DynamicDocumentTable.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
+    <Compile Include="DefaultJsonToXmlConverter.cs" />
     <Compile Include="DocumentStoreExtensions.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
     <Compile Include="IDatabase.cs" />
@@ -186,7 +187,6 @@
     <Compile Include="TableNotFoundException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
-    <Compile Include="JsonToXmlConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Migrations\packages.config" />
