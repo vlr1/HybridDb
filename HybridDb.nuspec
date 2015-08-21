@@ -18,7 +18,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="lib\*.*" target="lib\net40" />
-    <file src="tools\*.*" target="tools" />
+    <file src="HybridDb\lib\*.*" target="lib\net40" />
+    <file src="HybridDb\tools\*.*" target="tools" />
   </files>
 </package>

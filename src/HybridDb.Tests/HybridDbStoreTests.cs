@@ -1,4 +1,5 @@
 using System;
+using HybridDb.Serialization;
 
 namespace HybridDb.Tests
 {
@@ -15,7 +16,7 @@ namespace HybridDb.Tests
         {
             base.Reset();
 
-            UseSerializer(new DefaultJsonSerializer());
+            UseSerializer(new DefaultSerializer());
             factory = new Lazy<IDocumentStore>(() => Using(DocumentStore.ForTesting(database, configuration)));
         }
 
@@ -30,5 +31,10 @@ namespace HybridDb.Tests
             get { return factory.Value; }
         }
         // ReSharper restore InconsistentNaming
+
+        protected string NewId()
+        {
+            return Guid.NewGuid().ToString();
+        }
     }
 }

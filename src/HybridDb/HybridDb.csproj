@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -61,6 +61,7 @@
     <Reference Include="System.ComponentModel.Composition.Registration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reflection.Context" />
+    <Reference Include="System.Runtime" />
     <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -77,9 +78,9 @@
     <Compile Include="Config\DynamicDocumentTable.cs" />
     <Compile Include="Config\SqlColumn.cs" />
     <Compile Include="Config\SqlTypeMap.cs" />
-    <Compile Include="Database.cs" />
     <Compile Include="DocumentStoreExtensions.cs" />
     <Compile Include="HybridDbConfigurator.cs" />
+    <Compile Include="IDatabase.cs" />
     <Compile Include="IHybridDbConfigurator.cs" />
     <Compile Include="IHybridDbExtension.cs" />
     <Compile Include="IJsonToXmlConverter.cs" />
@@ -152,8 +153,6 @@
     <Compile Include="Config\IndexDesigner.cs" />
     <Compile Include="Config\IndexTable.cs" />
     <Compile Include="Commands\DatabaseCommand.cs" />
-    <Compile Include="DefaultBsonSerializer.cs" />
-    <Compile Include="DefaultJsonSerializer.cs" />
     <Compile Include="Commands\DeleteCommand.cs" />
     <Compile Include="IAdvancedDocumentSession.cs" />
     <Compile Include="Commands\InsertCommand.cs" />
@@ -163,14 +162,24 @@
     <Compile Include="DocumentSession.cs" />
     <Compile Include="DocumentStore.cs" />
     <Compile Include="ObjectToDictionaryRegistry.cs" />
+    <Compile Include="Serialization\DefaultSerializer.cs" />
+    <Compile Include="Serialization\Discriminator.cs" />
+    <Compile Include="Serialization\DiscriminatorAttribute.cs" />
+    <Compile Include="Serialization\Discriminators.cs" />
+    <Compile Include="Serialization\IDefaultSerializerConfigurator.cs" />
+    <Compile Include="Serialization\ReferenceEqualityComparer.cs" />
+    <Compile Include="Serialization\SerializationContext.cs" />
     <Compile Include="SqlBuilder.cs" />
     <Compile Include="Config\Table.cs" />
     <Compile Include="Config\SystemColumn.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="IDocumentStore.cs" />
-    <Compile Include="Config\ITable.cs" />
     <Compile Include="Config\Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SqlServer.cs" />
+    <Compile Include="SqlServerUsingTempDb.cs" />
+    <Compile Include="SqlServerUsingTempTables.cs" />
+    <Compile Include="SqlServerUsingRealTables.cs" />
     <Compile Include="StringEx.cs" />
     <Compile Include="TableBuilder.cs" />
     <Compile Include="TableMode.cs" />
@@ -185,10 +194,6 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>echo $(SolutionDir)merge.bat</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
