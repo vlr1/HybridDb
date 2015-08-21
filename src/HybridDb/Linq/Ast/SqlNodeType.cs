@@ -28,5 +28,6 @@
         Project,
         Ordering,
         OrderBy,
+        XQueryExist,
     }
 }

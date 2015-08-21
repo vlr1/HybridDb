@@ -1,7 +1,8 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using HybridDb.Linq.Parsers;
+using HybridDb.Config;
+using HybridDb.Linq.Builders;
 
 namespace HybridDb.Linq
 {
@@ -33,14 +34,14 @@ namespace HybridDb.Linq
             throw new NotSupportedException("Only for building LINQ expressions");
         }
         
-        internal static Translation Translate(this IQueryable query)
+        internal static SqlQuery Translate(this IQueryable query)
         {
-            return Translate(query.Expression);
+            return Translate(query.Expression, null);
         }
 
-        internal static Translation Translate(this Expression expression)
+        internal static SqlQuery Translate(this Expression expression, Configuration configuration)
         {
-            return new QueryTranslator().Translate(expression);
+            return new SqlQueryEmitter().Translate(configuration, expression);
         }
     }
 }

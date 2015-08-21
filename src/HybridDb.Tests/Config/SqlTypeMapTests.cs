@@ -68,18 +68,12 @@ namespace HybridDb.Tests.Config
         [InlineData(typeof(DateTimeOffset), DbType.DateTimeOffset)]
         [InlineData(typeof(Single), DbType.Single)]
         [InlineData(typeof(TimeSpan), DbType.Time)]
+        [InlineData(typeof(object), DbType.Xml)]
+        [InlineData(typeof(SomeClass), DbType.Xml)]
         public void ConvertGivesCorrectType(Type columnType, DbType expectedType)
         {
             var sqlColumn = SqlTypeMap.Convert(new Column("SomeColumn", columnType, 42));
             sqlColumn.DbType.ShouldBe(expectedType);
-        }
-
-        [Theory]
-        [InlineData(typeof(object))]
-        [InlineData(typeof(SomeClass))]
-        public void ThrowsIfUnknownType(Type columnType)
-        {
-            Should.Throw<ArgumentException>(() => SqlTypeMap.Convert(new Column("SomeColumn", columnType)));
         }
 
         class SomeClass {}

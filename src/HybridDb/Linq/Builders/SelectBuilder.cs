@@ -3,16 +3,16 @@ using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 using System.Linq;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq.Builders
 {
-    internal class SelectParser : LambdaParser
+    internal class SelectBuilder : LambdaBuilder
     {
-        public SelectParser(Stack<SqlExpression> ast) : base(ast) { }
+        public SelectBuilder(Stack<SqlExpression> ast) : base(ast) { }
 
         public static SqlExpression Translate(Expression expression)
         {
             var operations = new Stack<SqlExpression>();
-            new SelectParser(operations).Visit(expression);
+            new SelectBuilder(operations).Visit(expression);
             return operations.Pop();
         }
         

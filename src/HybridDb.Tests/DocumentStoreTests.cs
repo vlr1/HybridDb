@@ -65,44 +65,6 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FailsOnDynamicallyInsertedComplexProjections()
-        {
-            Document<Entity>();
-            
-            Should.Throw<ArgumentException>(() =>
-                store.Insert(new DynamicDocumentTable("Entities"), Guid.NewGuid(), new { Complex = new Entity.ComplexType() }));
-        }
-
-        [Fact(Skip = "Feature on hold")]
-        public void CanInsertCollectionProjections()
-        {
-            Document<Entity>().With(x => x.Children.Select(y => y.NestedProperty));
-            
-            var id = Guid.NewGuid();
-            var schema = store.Configuration.GetDesignFor<Entity>();
-            store.Insert(
-                schema.Table, id,
-                new
-                {
-                    Children = new[]
-                    {
-                        new {NestedProperty = "A"},
-                        new {NestedProperty = "B"}
-                    }
-                });
-
-            var mainrow = database.RawQuery<dynamic>("select * from #Entities").Single();
-            ((Guid)mainrow.Id).ShouldBe(id);
-
-            var utilrows = database.RawQuery<dynamic>("select * from #Entities_Children").ToList();
-            utilrows.Count.ShouldBe(2);
-            
-            var utilrow = utilrows.First();
-            ((Guid)utilrow.DocumentId).ShouldBe(id);
-            ((string)utilrow.NestedString).ShouldBe("A");
-        }
-
-        [Fact]
         public void CanUpdate()
         {
             Document<Entity>().With(x => x.Field);
@@ -835,8 +797,39 @@ namespace HybridDb.Tests
             });
 
             QueryStats stats;
-            var row = store.Query(table, out stats, "Complex.value('(/ComplexType/A)[1]', 'varchar(max)') as Hallo").Single();
-            row["Hallo"].ShouldBe("Emil");
+            var row = store.Query(table, out stats, "Complex").Single();
+
+            row["Complex"].ShouldBe("<root><A>Emil</A><B>2</B></root>");
+        }
+
+        [Fact]
+        public void CanInsertListProjectionsAsXml()
+        {
+            Document<Entity>().With(x => x.Children);
+
+            var table = store.Configuration.GetDesignFor<Entity>().Table;
+            store.Insert(table, Guid.NewGuid(), new
+            {
+                Children = new List<object>
+                {
+                    new Entity.ComplexType
+                    {
+                        A = "Asger",
+                        B = 1
+                    },
+                    new Entity.ComplexType
+                    {
+                        A = "Emil",
+                        B = 2
+                    }, 
+                    "Stringy"
+                }
+            });
+
+            QueryStats stats;
+            var row = store.Query(table, out stats, "Children").Single();
+
+            row["Children"].ShouldBe("<root><A>Emil</A><B>2</B></root>");
         }
 
         [Fact]

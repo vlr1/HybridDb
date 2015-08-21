@@ -2,16 +2,16 @@
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq.Builders
 {
-    internal class OrderByVisitor : LambdaParser
+    internal class OrderByBuilder : LambdaBuilder
     {
-        public OrderByVisitor(Stack<SqlExpression> ast) : base(ast) {}
+        public OrderByBuilder(Stack<SqlExpression> ast) : base(ast) {}
 
         public static SqlColumnExpression Translate(Expression expression)
         {
             var ast = new Stack<SqlExpression>();
-            new OrderByVisitor(ast).Visit(expression);
+            new OrderByBuilder(ast).Visit(expression);
             return (SqlColumnExpression) ast.Pop();
         }
     }

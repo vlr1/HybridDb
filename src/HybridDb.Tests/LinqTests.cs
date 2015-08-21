@@ -605,12 +605,27 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void FactMethodName()
+        public void SimpleAny()
         {
-            var translation = Query<Entity>().Where(x => x.Children.Any(y => y.NestedString == "Asger")).Translate();
+            var translation = Query<Entity>()
+                .Where(x => x.Children.Any(y => y.NestedString == "Asger"))
+                .Translate();
 
-            translation.Where.ShouldBe("(Children.exist() = 1)");
-            translation.Parameters.ShouldContainKeyAndValue("@Value0", "Asger");
+            translation.Where.ShouldBe("(Children.exist('root/item[NestedString[.=\"Asger\"]]') = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
+        public void NestedAny()
+        {
+            var translation = Query<Entity>()
+                .Where(x => x.Children
+                    .Any(y => y.NestedString == "Asger" && y.NestedList
+                        .Any(z => z.NestedString == "Stærkmand")))
+                .Translate();
+
+            translation.Where.ShouldBe("(Children.exist('root/item[(NestedString[.=\"Asger\"] and NestedList/item[NestedString[.=\"Stærkmand\"]])]') = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
 
         Query<T> Query<T>() where T : class
@@ -646,6 +661,7 @@ namespace HybridDb.Tests
             {
                 public double NestedProperty { get; set; }
                 public string NestedString { get; set; }
+                public List<Child> NestedList { get; set; }
             }
         }
 

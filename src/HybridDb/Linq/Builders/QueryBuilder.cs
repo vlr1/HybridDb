@@ -1,17 +1,25 @@
 ﻿using System;
 using System.Linq.Expressions;
+using HybridDb.Config;
 using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq.Builders
 {
-    internal class QueryParser : ExpressionVisitor
+    internal class QueryBuilder : ExpressionVisitor
     {
+        readonly Configuration configuration;
+
+        public QueryBuilder(Configuration configuration)
+        {
+            this.configuration = configuration;
+        }
+
         public int Skip { get; private set; }
         public int Take { get; private set; }
         public SqlExpression Select { get; private set; }
         public SqlExpression Where { get; private set; }
         public SqlOrderByExpression OrderBy { get; private set; }
-        public Translation.ExecutionSemantics Execution { get; set; }
+        public SqlQuery.ExecutionSemantics Execution { get; set; }
 
         protected override Expression VisitMethodCall(MethodCallExpression expression)
         {
@@ -20,28 +28,28 @@ namespace HybridDb.Linq.Parsers
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Select = SelectParser.Translate(expression.Arguments[1]);
+                    Select = SelectBuilder.Translate(expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
-                    Execution = Translation.ExecutionSemantics.SingleOrDefault;
+                    Execution = SqlQuery.ExecutionSemantics.SingleOrDefault;
                     goto Take1;
                 case "Single":
-                    Execution = Translation.ExecutionSemantics.Single;
+                    Execution = SqlQuery.ExecutionSemantics.Single;
                     goto Take1;
                 case "FirstOrDefault":
-                    Execution = Translation.ExecutionSemantics.FirstOrDefault;
+                    Execution = SqlQuery.ExecutionSemantics.FirstOrDefault;
                     goto Take1;
                 case "First":
-                    Execution = Translation.ExecutionSemantics.First;
+                    Execution = SqlQuery.ExecutionSemantics.First;
                     goto Take1;
                 case "Take1":
                     Take1:
                     Take = 1;
-                    if (expression.Arguments.Count <= 1) break;
-                    goto Where;
+                    if (expression.Arguments.Count > 1) goto Where;
+                    break;
                 case "Where":
                     Where:
-                    var whereExpression = WhereParser.Translate(expression.Arguments[1]);
+                    var whereExpression = WhereBuilder.Translate(expression.Arguments[1]);
                     if (whereExpression == null)
                         break;
 
@@ -56,7 +64,7 @@ namespace HybridDb.Linq.Parsers
                     Take = (int) ((ConstantExpression) expression.Arguments[1]).Value;
                     break;
                 case "OfType":
-                    // Change of type is done else where
+                    // Change of type is done elsewhere
                     break;
                 case "OrderBy":
                 case "ThenBy":
@@ -66,7 +74,7 @@ namespace HybridDb.Linq.Parsers
                                         ? SqlOrderingExpression.Directions.Descending
                                         : SqlOrderingExpression.Directions.Ascending;
 
-                    var orderByColumnExpression = OrderByVisitor.Translate(expression.Arguments[1]);
+                    var orderByColumnExpression = OrderByBuilder.Translate(expression.Arguments[1]);
                     var orderingExpression = new SqlOrderingExpression(direction, orderByColumnExpression);
                     OrderBy = OrderBy != null
                                   ? new SqlOrderByExpression(OrderBy.Columns.Concat(orderingExpression))

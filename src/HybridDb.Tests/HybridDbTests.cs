@@ -123,12 +123,12 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
-                Children = new List<Child>();
+                Children = new List<object>();
             }
 
             public Guid Id { get; set; }
             public string ProjectedProperty { get; set; }
-            public List<Child> Children { get; set; }
+            public List<object> Children { get; set; }
             public string Field;
             public string Property { get; set; }
             public int Number { get; set; }
@@ -145,8 +145,14 @@ namespace HybridDb.Tests
 
             public class ComplexType
             {
+                public ComplexType()
+                {
+                    Children = new List<object>();
+                }
+
                 public string A { get; set; }
                 public int B { get; set; }
+                public List<object> Children { get; set; }
 
                 public override string ToString()
                 {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -54,9 +55,9 @@ namespace HybridDb.Linq
         {
             var result = ExecuteQuery<T>(expression);
 
-            switch (result.Translation.ExecutionMethod)
+            switch (result.SqlQuery.ExecutionMethod)
             {
-                case Translation.ExecutionSemantics.Single:
+                case SqlQuery.ExecutionSemantics.Single:
                     if (lastQueryStats.TotalResults > 1)
                         throw new InvalidOperationException("Query returned more than one element");
 
@@ -64,7 +65,7 @@ namespace HybridDb.Linq
                         throw new InvalidOperationException("Query returned no elements");
 
                     return result.Results.Single();
-                case Translation.ExecutionSemantics.SingleOrDefault:
+                case SqlQuery.ExecutionSemantics.SingleOrDefault:
                     if (lastQueryStats.TotalResults > 1)
                         throw new InvalidOperationException("Query returned more than one element");
 
@@ -72,24 +73,26 @@ namespace HybridDb.Linq
                         return default(T);
 
                     return result.Results.Single();
-                case Translation.ExecutionSemantics.First:
+                case SqlQuery.ExecutionSemantics.First:
                     if (lastQueryStats.TotalResults < 1)
                         throw new InvalidOperationException("Query returned no elements");
 
                     return result.Results.First();
-                case Translation.ExecutionSemantics.FirstOrDefault:
+                case SqlQuery.ExecutionSemantics.FirstOrDefault:
                     if (lastQueryStats.TotalResults < 1)
                         return default(T);
 
                     return result.Results.First();
                 default:
-                    throw new ArgumentOutOfRangeException("Does not support execution method " + result.Translation.ExecutionMethod);
+                    throw new ArgumentOutOfRangeException("Does not support execution method " + result.SqlQuery.ExecutionMethod);
             }
         }
 
         TranslationAndResult<TProjection> ExecuteQuery<TProjection>(Expression expression)
         {
-            var translation = expression.Translate();
+            var translation = expression.Translate(store.Configuration);
+
+            Debug.WriteLine(translation.Where);
 
             if (typeof (TProjection).IsAssignableFrom(design.DocumentType))
             {
@@ -145,13 +148,13 @@ namespace HybridDb.Linq
 
         class TranslationAndResult<T>
         {
-            public TranslationAndResult(Translation translation, IEnumerable<T> results)
+            public TranslationAndResult(SqlQuery sqlQuery, IEnumerable<T> results)
             {
-                Translation = translation;
+                SqlQuery = sqlQuery;
                 Results = results;
             }
 
-            public Translation Translation { get; private set; }
+            public SqlQuery SqlQuery { get; private set; }
             public IEnumerable<T> Results { get; private set; }
         }
     }

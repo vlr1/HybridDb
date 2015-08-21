@@ -82,7 +82,7 @@ namespace HybridDb.Tests
             projection.ReturnType.ShouldBe(typeof(Entity));
             projection.Projector(new Entity());
 
-            TableFor<Entity>()["Self"].Type.ShouldBe(typeof(SqlXml));
+            TableFor<Entity>()["Self"].Type.ShouldBe(typeof(Entity));
         }
 
         [Fact]

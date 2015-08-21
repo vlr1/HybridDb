@@ -63,5 +63,10 @@ namespace HybridDb.Linq
         {
             return new SqlNotExpression(Visit(expression.Operand));
         }
+
+        protected virtual SqlExpression Visit(SqlXQueryExistExpression expression)
+        {
+            return expression;
+        }
     }
 }

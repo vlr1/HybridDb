@@ -139,6 +139,12 @@ namespace HybridDb.Linq
             return expression;
         }
 
+        protected override SqlExpression Visit(SqlXQueryExistExpression expression)
+        {
+            sql.AppendFormat("{0}.exist('{1}')", expression.Column.ColumnName, expression.Query);
+            return expression;
+        }
+
         string FormatConstant(object value)
         {
             if (value == null)

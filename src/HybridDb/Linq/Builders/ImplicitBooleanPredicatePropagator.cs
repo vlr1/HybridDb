@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq.Builders
 {
     public class ImplicitBooleanPredicatePropagator : SqlExpressionVisitor
     {

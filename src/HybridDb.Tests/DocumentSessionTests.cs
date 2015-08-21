@@ -1129,13 +1129,15 @@ namespace HybridDb.Tests
             }
         }
 
-        [Fact(Skip = "Feature on holds")]
-        public void CanProjectCollection()
+        [Fact]
+        public void CanQueryCollection()
         {
+            Document<Entity>().With(x => x.Children);
+
             var id = Guid.NewGuid();
             using (var session = store.OpenSession())
             {
-                var entity1 = new Entity
+                session.Store(new Entity
                 {
                     Id = id,
                     Children =
@@ -1143,9 +1145,60 @@ namespace HybridDb.Tests
                         new Entity.Child {NestedProperty = "A"},
                         new Entity.Child {NestedProperty = "B"}
                     }
-                };
+                });
 
-                session.Store(entity1);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Query<Entity>()
+                    .Where(x => x.Children.Any(y => ((Entity.Child)y).NestedProperty == "A"))
+                    .ShouldNotBeEmpty();
+
+                session.Query<Entity>()
+                    .Where(x => x.Children.Any(y => ((Entity.Child) y).NestedProperty == "C"))
+                    .ShouldBeEmpty();
+            }
+        }
+
+        [Fact]
+        public void CanQueryComplexObjectWithCollections()
+        {
+            Document<Entity>().With(x => x.Complex);
+
+            var id = Guid.NewGuid();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Entity
+                {
+                    Id = id,
+                    Complex = new Entity.ComplexType
+                    {
+                        A = "Mogens",
+                        Children =
+                        {
+                            new Entity.ComplexType
+                            {
+                                B = 52,
+                                Children = { "Asger" },
+                            }
+                        }
+                    }
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Query<Entity>()
+                    .Where(x => 
+                        x.Complex.A == "Mogens" && 
+                        x.Complex.Children.OfType<Entity.ComplexType>().Any(y => 
+                            y.B == 52 && 
+                            y.Children.Any(z => (string)z == "Asger")))
+                    .ShouldNotBeEmpty();
             }
         }
 

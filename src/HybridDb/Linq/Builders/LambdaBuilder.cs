@@ -4,13 +4,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using HybridDb.Linq.Ast;
 
-namespace HybridDb.Linq.Parsers
+namespace HybridDb.Linq.Builders
 {
-    public class LambdaParser : ExpressionVisitor
+    public class LambdaBuilder : ExpressionVisitor
     {
         protected readonly Stack<SqlExpression> ast;
 
-        public LambdaParser(Stack<SqlExpression> ast)
+        public LambdaBuilder(Stack<SqlExpression> ast)
         {
             this.ast = ast;
         }
