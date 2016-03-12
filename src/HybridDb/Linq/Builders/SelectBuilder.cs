@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq.Expressions;
+using HybridDb.Config;
 using HybridDb.Linq.Ast;
 using System.Linq;
 
@@ -7,12 +8,12 @@ namespace HybridDb.Linq.Builders
 {
     internal class SelectBuilder : LambdaBuilder
     {
-        public SelectBuilder(Stack<SqlExpression> ast) : base(ast) { }
+        public SelectBuilder(DocumentDesign design, Stack<SqlExpression> ast) : base(design, ast) { }
 
-        public static SqlExpression Translate(Expression expression)
+        public static SqlExpression Translate(DocumentDesign design, Expression expression)
         {
             var operations = new Stack<SqlExpression>();
-            new SelectBuilder(operations).Visit(expression);
+            new SelectBuilder(design, operations).Visit(expression);
             return operations.Pop();
         }
         

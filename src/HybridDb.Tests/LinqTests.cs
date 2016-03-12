@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using HybridDb.Config;
 using HybridDb.Linq;
 using Shouldly;
 using Xunit;
 
 namespace HybridDb.Tests
 {
-    public class LinqTests
+    public class LinqTests : HybridDbTests
     {
         [Fact]
         public void CanQueryUsingQueryComprehensionSyntax()
@@ -243,9 +244,12 @@ namespace HybridDb.Tests
         [Fact]
         public void CanQueryOnComplexProperties()
         {
+            Document<Entity>().With(x => x.Children);
+
             var translation = Query<Entity>()
                 .Where(x => x.Complex.GetType().GetProperties(BindingFlags.Static | BindingFlags.Instance).Any())
                 .Translate();
+
             translation.Where.ShouldBe("(ComplexGetTypeGetPropertiesInstanceStaticAny = @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", true);
         }
@@ -605,8 +609,10 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void SimpleAny()
+        public void XmlColumnAny()
         {
+            Document<Entity>().With(x => x.Children);
+
             var translation = Query<Entity>()
                 .Where(x => x.Children.Any(y => y.NestedString == "Asger"))
                 .Translate();
@@ -616,8 +622,23 @@ namespace HybridDb.Tests
         }
 
         [Fact]
+        public void XmlColumnEqual()
+        {
+            Document<Entity>().With(x => x.Complex);
+
+            var translation = Query<Entity>()
+                .Where(x => x.Complex.NestedString == "hackernight")
+                .Translate();
+
+            translation.Where.ShouldBe("(Complex.exist('root/NestedString[.=\"hackernight\"]') = @Value0)");
+            translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
+        }
+
+        [Fact]
         public void NestedAny()
         {
+            Document<Entity>().With(x => x.Children);
+
             var translation = Query<Entity>()
                 .Where(x => x.Children
                     .Any(y => y.NestedString == "Asger" && y.NestedList
@@ -630,9 +651,9 @@ namespace HybridDb.Tests
 
         Query<T> Query<T>() where T : class
         {
-            var store = DocumentStore.ForTesting(TableMode.UseTempTables);
+            var store = DocumentStore.ForTesting(TableMode.UseTempTables, this);
             var session = new DocumentSession(store);
-            return new Query<T>(new QueryProvider<T>(session, null));
+            return new Query<T>(new QueryProvider<T>(session, configuration.TryGetDesignFor<T>()));
         }
 
         public class Entity
@@ -642,7 +663,7 @@ namespace HybridDb.Tests
             public Entity()
             {
                 TheChild = new Child();
-                Complex = new object();
+                Complex = new Child();
                 Children = new List<Child>();
             }
 
@@ -654,7 +675,7 @@ namespace HybridDb.Tests
             public bool BoolProp { get; set; }
             public Child TheChild { get; set; }
             public List<Child> Children { get; set; }
-            public object Complex { get; set; }
+            public Child Complex { get; set; }
             public Enumse Enum { get; set; }
 
             public class Child

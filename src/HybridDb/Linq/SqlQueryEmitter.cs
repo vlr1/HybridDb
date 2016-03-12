@@ -9,9 +9,9 @@ namespace HybridDb.Linq
 {
     public class SqlQueryEmitter
     {
-        public SqlQuery Translate(Configuration configuration, Expression expression)
+        public SqlQuery Translate(DocumentDesign design, Expression expression)
         {
-            var queryBuilder = new QueryBuilder(configuration);
+            var queryBuilder = new QueryBuilder(design);
             
             // parameters are indexed by value to ease reusing params by value
             var parameters = new Dictionary<object, string>();

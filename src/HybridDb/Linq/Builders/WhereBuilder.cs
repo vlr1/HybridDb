@@ -12,11 +12,8 @@ namespace HybridDb.Linq.Builders
 {
     internal class WhereBuilder : LambdaBuilder
     {
-        readonly DocumentDesign design;
-
-        public WhereBuilder(DocumentDesign design, Stack<SqlExpression> ast) : base(ast)
+        public WhereBuilder(DocumentDesign design, Stack<SqlExpression> ast) : base(design, ast)
         {
-            this.design = design;
         }
 
         public SqlExpression Result
@@ -24,10 +21,11 @@ namespace HybridDb.Linq.Builders
             get { return ast.Peek(); }
         }
 
-        public static SqlExpression Translate(Expression expression)
+        public static SqlExpression Translate(DocumentDesign design, Expression expression)
         {
             var ast = new Stack<SqlExpression>();
-            new WhereBuilder(null, ast).Visit(expression);
+
+            new WhereBuilder(design, ast).Visit(expression);
 
             if (ast.Count == 0)
                 return null;
@@ -111,7 +109,6 @@ namespace HybridDb.Linq.Builders
 
         protected override void VisitColumnMethodCall(MethodCallExpression expression)
         {
-
             switch (expression.Method.Name)
             {
                 case "StartsWith":
@@ -133,24 +130,28 @@ namespace HybridDb.Linq.Builders
                     }
                     break;
                 case "Any":
-                    //var col = design.Table[column2.ColumnName];
-                    //if (SqlTypeMap.Convert(col).DbType != DbType.Xml)
-                    //    throw new InvalidOperationException();
-
+                    if (!IsXmlColumn(((SqlColumnExpression) ast.Peek()))) 
+                        goto default;
+                    
                     ast.Push(new SqlBinaryExpression(
-                        SqlNodeType.Equal, 
+                        SqlNodeType.Equal,
                         new SqlXQueryExistExpression(
-                            (SqlColumnExpression)ast.Pop(),
+                            (SqlColumnExpression) ast.Pop(),
                             new PredicateBuilder().BuildAnyPredicate2(expression)),
-                        new SqlConstantExpression(typeof(int), 1)));
-                    break;         
+                        new SqlConstantExpression(typeof (int), 1)));
+                    break;
                 default:
                     base.VisitColumnMethodCall(expression);
                     break;
             }
         }
-    }
 
+        bool IsXmlColumn(SqlColumnExpression expression)
+        {
+            var column = design.Table[((SqlColumnExpression) ast.Peek()).ColumnName];
+            return column != null && SqlTypeMap.Convert(column).DbType == DbType.Xml;
+        }
+    }
 
     public class PredicateBuilder
     {
@@ -165,18 +166,12 @@ namespace HybridDb.Linq.Builders
             return "$" + ((char)(64 + index));
         }
 
-        public string TranslateToWhere(MethodCallExpression node)
+        public string TranslateToWhere(Expression predicate)
         {
             paths.Push("");
 
-            if (node.Arguments.Count != 2)
-                throw new NotSupportedException("Unknown Where call");
-
-            Expression predicate = node.Arguments[1];
             var x = predicate as UnaryExpression;
-            Expression operand = x.Operand;
-
-            var lambdaExpression = operand as LambdaExpression;
+            var lambdaExpression = x.Operand as LambdaExpression;
             var result = BuildPredicate(lambdaExpression.Body);
 
             paths.Pop();
@@ -184,7 +179,7 @@ namespace HybridDb.Linq.Builders
             return result;
         }
 
-        private string BuildPredicate(Expression expression)
+        public string BuildPredicate(Expression expression)
         {
             switch (expression.NodeType)
             {

@@ -12,8 +12,10 @@ namespace HybridDb
     /// </summary>
     public class ObjectToDictionaryRegistry
     {
-        private static readonly Dictionary<Type, Func<object, IDictionary<string, object>>> cache = new Dictionary<Type, Func<object, IDictionary<string, object>>>();
-        private static readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
+        static readonly Dictionary<Type, Func<object, IDictionary<string, object>>> cache = 
+            new Dictionary<Type, Func<object, IDictionary<string, object>>>();
+        
+        static readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// Loads the values of an object's properties into a <see cref="IDictionary{String,Object}"/>.

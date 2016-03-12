@@ -7,11 +7,11 @@ namespace HybridDb.Linq.Builders
 {
     internal class QueryBuilder : ExpressionVisitor
     {
-        readonly Configuration configuration;
+        readonly DocumentDesign design;
 
-        public QueryBuilder(Configuration configuration)
+        public QueryBuilder(DocumentDesign design)
         {
-            this.configuration = configuration;
+            this.design = design;
         }
 
         public int Skip { get; private set; }
@@ -28,7 +28,7 @@ namespace HybridDb.Linq.Builders
             switch (expression.Method.Name)
             {
                 case "Select":
-                    Select = SelectBuilder.Translate(expression.Arguments[1]);
+                    Select = SelectBuilder.Translate(design, expression.Arguments[1]);
                     break;
                 case "SingleOrDefault":
                     Execution = SqlQuery.ExecutionSemantics.SingleOrDefault;
@@ -49,7 +49,7 @@ namespace HybridDb.Linq.Builders
                     break;
                 case "Where":
                     Where:
-                    var whereExpression = WhereBuilder.Translate(expression.Arguments[1]);
+                    var whereExpression = WhereBuilder.Translate(design, expression.Arguments[1]);
                     if (whereExpression == null)
                         break;
 
@@ -74,7 +74,7 @@ namespace HybridDb.Linq.Builders
                                         ? SqlOrderingExpression.Directions.Descending
                                         : SqlOrderingExpression.Directions.Ascending;
 
-                    var orderByColumnExpression = OrderByBuilder.Translate(expression.Arguments[1]);
+                    var orderByColumnExpression = OrderByBuilder.Translate(design, expression.Arguments[1]);
                     var orderingExpression = new SqlOrderingExpression(direction, orderByColumnExpression);
                     OrderBy = OrderBy != null
                                   ? new SqlOrderByExpression(OrderBy.Columns.Concat(orderingExpression))

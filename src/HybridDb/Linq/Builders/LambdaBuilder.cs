@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using HybridDb.Config;
 using HybridDb.Linq.Ast;
 
 namespace HybridDb.Linq.Builders
 {
     public class LambdaBuilder : ExpressionVisitor
     {
+        protected readonly DocumentDesign design;
         protected readonly Stack<SqlExpression> ast;
 
-        public LambdaBuilder(Stack<SqlExpression> ast)
+        public LambdaBuilder(DocumentDesign design, Stack<SqlExpression> ast)
         {
+            this.design = design;
             this.ast = ast;
         }
 
@@ -92,11 +96,11 @@ namespace HybridDb.Linq.Builders
 
         protected virtual void VisitColumnMethodCall(MethodCallExpression expression)
         {
+            var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
             switch (expression.Method.Name)
             {
                 case "Column":
                 {
-                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
                         throw new NotSupportedException(
@@ -112,7 +116,6 @@ namespace HybridDb.Linq.Builders
                 }
                 case "Index":
                 {
-                    var column = ast.Pop() as SqlColumnExpression; // remove the current column expression
                     if (column == null || column.ColumnName != "")
                     {
                         throw new NotSupportedException(
@@ -125,7 +128,6 @@ namespace HybridDb.Linq.Builders
                     break;
                 }
                 default:
-                    ast.Pop();
                     var name = ColumnNameBuilder.GetColumnNameByConventionFor(expression);
                     ast.Push(new SqlColumnExpression(expression.Method.ReturnType, name));
                     break;

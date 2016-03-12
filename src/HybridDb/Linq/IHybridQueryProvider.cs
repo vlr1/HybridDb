@@ -8,5 +8,6 @@ namespace HybridDb.Linq
     {
         IEnumerable<T> ExecuteEnumerable<T>(Expression expression);
         string GetQueryText(IQueryable expression);
+        SqlQuery Translate(Expression query);
     }
 }

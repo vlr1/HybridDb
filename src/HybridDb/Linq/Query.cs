@@ -64,5 +64,10 @@ namespace HybridDb.Linq
         {
             return provider.GetQueryText(this);
         }
+
+        public SqlQuery Translate()
+        {
+            return provider.Translate(expression);
+        }
     }
 }

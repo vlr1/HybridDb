@@ -90,7 +90,7 @@ namespace HybridDb.Linq
 
         TranslationAndResult<TProjection> ExecuteQuery<TProjection>(Expression expression)
         {
-            var translation = expression.Translate(store.Configuration);
+            var translation = Translate(expression);
 
             Debug.WriteLine(translation.Where);
 
@@ -133,7 +133,12 @@ namespace HybridDb.Linq
 
         public string GetQueryText(IQueryable query)
         {
-            return query.Translate().Where;
+            return Translate(query.Expression).Where;
+        }
+
+        public SqlQuery Translate(Expression expression)
+        {
+            return new SqlQueryEmitter().Translate(design, expression);
         }
 
         internal void WriteStatisticsTo(out QueryStats stats)

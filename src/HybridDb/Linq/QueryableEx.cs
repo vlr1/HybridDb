@@ -33,15 +33,10 @@ namespace HybridDb.Linq
         {
             throw new NotSupportedException("Only for building LINQ expressions");
         }
-        
-        internal static SqlQuery Translate(this IQueryable query)
+       
+        internal static SqlQuery Translate<T>(this IQueryable<T> expression)
         {
-            return Translate(query.Expression, null);
-        }
-
-        internal static SqlQuery Translate(this Expression expression, Configuration configuration)
-        {
-            return new SqlQueryEmitter().Translate(configuration, expression);
+            return ((Query<T>) expression).Translate();
         }
     }
 }
