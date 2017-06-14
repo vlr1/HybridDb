@@ -193,6 +193,8 @@ namespace HybridDb.Config
             }
         }
 
+        public void UseMigrations(params Migration[] migrations) => UseMigrations(migrations.ToList());
+
         public void UseMigrations(IReadOnlyList<Migration> migrations)
         {
             Migrations = migrations.OrderBy(x => x.Version).Where((x, i) =>

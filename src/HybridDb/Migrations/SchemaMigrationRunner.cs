@@ -104,9 +104,7 @@ namespace HybridDb.Migrations
                     logger.Information("Skips provided migrations when not using real tables.");
                 }
 
-                // get the diff and run commands to get to configured schema
-                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
-                var commands = differ.CalculateSchemaChanges(schema, configuration);
+                var commands = GetDiffCommands(database, configuration);
 
                 if (commands.Any())
                 {
@@ -141,6 +139,16 @@ else
 
                 tx.Complete();
             }
+        }
+
+        IReadOnlyList<SchemaMigrationCommand> GetDiffCommands(IDatabase database, Configuration configuration)
+        {
+            var schema = database is SqlServerUsingTempTables 
+                ? new List<Table>() // assume that this a fresh session
+                : database.QuerySchema().Values.ToList();
+            
+            // get the diff and run commands to get to configured schema
+            return differ.CalculateSchemaChanges(schema, configuration);
         }
 
         IEnumerable<string> ExecuteCommand(IDatabase database, SchemaMigrationCommand command)

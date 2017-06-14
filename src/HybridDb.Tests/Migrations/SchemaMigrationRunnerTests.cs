@@ -14,14 +14,11 @@ namespace HybridDb.Tests.Migrations
 {
     public class SchemaMigrationRunnerTests : HybridDbTests
     {
-        public SchemaMigrationRunnerTests()
-        {
-            UseRealTables();
-        }
-
         [Fact]
         public void AutomaticallyCreatesMetadataTable()
         {
+            UseRealTables();
+
             var runner = new SchemaMigrationRunner(store, new SchemaDiffer());
 
             runner.Run();
@@ -33,6 +30,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNothingWhenTurnedOff()
         {
+            UseRealTables();
             DisableMigrations();
             CreateMetadataTable();
 
@@ -47,6 +45,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNothingGivenNoMigrations()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             var runner = new SchemaMigrationRunner(store, new FakeSchemaDiffer());
@@ -60,6 +59,7 @@ namespace HybridDb.Tests.Migrations
 
         public void RunsProvidedSchemaMigrations()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             UseMigrations(new InlineMigration(1,
@@ -101,6 +101,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RunsDiffedSchemaMigrations()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             var runner = new SchemaMigrationRunner(store,
@@ -119,6 +120,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RunsProvidedSchemaMigrationsInOrderThenDiffed()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             var table = new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true));
@@ -142,6 +144,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotRunUnsafeSchemaMigrations()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             UseMigrations(new InlineMigration(1, new UnsafeThrowingCommand()));
@@ -155,6 +158,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void DoesNotRunSchemaMigrationTwice()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             var command = new CountingCommand();
@@ -172,6 +176,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void NextRunContinuesAtNextVersion()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             var command = new CountingCommand();
@@ -192,6 +197,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void ThrowsIfSchemaVersionIsAhead()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             UseMigrations(new InlineMigration(1, new CountingCommand()));
@@ -207,6 +213,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void RollsBackOnExceptions()
         {
+            UseRealTables();
             CreateMetadataTable();
 
             try
@@ -228,6 +235,7 @@ namespace HybridDb.Tests.Migrations
         [Fact]
         public void SetsRequiresReprojectionOnTablesWithNewColumns()
         {
+            UseRealTables();
             Document<Entity>();
             Document<AbstractEntity>();
             Document<DerivedEntity>();
@@ -258,10 +266,14 @@ namespace HybridDb.Tests.Migrations
             store.Database.RawQuery<bool>("select AwaitsReprojection from OtherEntities").ShouldAllBe(x => !x);
         }
 
-        [Fact]
-        public void HandlesConcurrentRuns()
+        [Theory]
+        [InlineData(TableMode.UseTempTables)]
+        [InlineData(TableMode.UseTempDb)]
+        [InlineData(TableMode.UseRealTables)]
+        public void HandlesConcurrentRuns(TableMode mode)
         {
-            UseRealTables();
+            Use(mode);
+
             CreateMetadataTable();
 
             store.Initialize();
@@ -286,6 +298,48 @@ namespace HybridDb.Tests.Migrations
             });
 
             countingCommand.NumberOfTimesCalled.ShouldBe(1);
+        }
+
+        [Fact]
+        public void HandlesConcurrentRunsOnTempTables()
+        {
+            var countingCommand = new CountingCommand();
+
+            Func<int, Action> runnerFactory = (i) =>
+            {
+                var s = Using(new DocumentStore(new Configuration(), TableMode.UseTempTables, connectionString, true));
+
+                new CreateTable(new Table("HybridDb", new Column("SchemaVersion", typeof(int)))).Execute(s.Database);
+
+                s.Initialize();
+
+                return () =>
+                {
+                    if (i == 0)
+                    {
+                        new SchemaMigrationRunner(s, new FakeSchemaDiffer(
+                            new CreateTable(new Table("Testing", new Column("Id", typeof(Guid), isPrimaryKey: true))),
+                            countingCommand)).Run();
+                    }
+                    else
+                    {
+                        var a = s.OpenSession().Query<object>().ToList();
+                        s.Dispose();
+                    }
+                };
+            };
+
+            Task.WaitAll(Enumerable.Repeat(runnerFactory, 5)
+                .Select((factory, i) => factory(i % 2)).ToList()
+                .Select(runner => Task.Run(() =>
+                {
+                    Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+
+                    runner();
+
+                })).ToArray());
+            
+            //countingCommand.NumberOfTimesCalled.ShouldBe(50);
         }
 
         void CreateMetadataTable()

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
 using Dapper;
 using HybridDb.Config;
@@ -135,7 +136,7 @@ and k.column_name = '{column}'";
                 return defaultValue;
 
             if (columnType == typeof (DateTimeOffset))
-                return DateTimeOffset.Parse(defaultValue);
+                return DateTimeOffset.Parse(defaultValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
 
             if (columnType == typeof (Guid))
                 return Guid.Parse(defaultValue);
