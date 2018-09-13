@@ -25,6 +25,13 @@ namespace HybridDb
     // gem alle migrationnavne (måske deres sql hvis den er der) som rows i HybridDb tabellen
 
 
+    // Next up: 
+    // Test op imod en docker container?
+    // Lav test af InMemoryStore samtidig (måske push samtidig?)
+    // Discriminators
+    // Migration-historien
+    // 
+
     public interface IDocumentStore
     {
         void Up(params Migration[] migrations);
@@ -65,7 +72,17 @@ namespace HybridDb
                         if object_id('Documents', 'U') is null
                         begin
                             create table Documents (
-                                Id nvarchar(900) not null
+                                Id nvarchar(900) not null,
+                                Etag uniqueidentifier,
+                                RowVersion rowversion,
+                                Operation tinyint,
+                                Metadata nvarchar(max),
+                                Document nvarchar(max)
+
+                                constraint [pk_Id] primary key clustered 
+                                (
+	                                [Id] asc
+                                ) with (pad_index = off, statistics_norecompute = off, ignore_dup_key = off, allow_row_locks = on, allow_page_locks = on)
                             )
                         end;
                     ", transaction: tx);
@@ -103,22 +120,25 @@ namespace HybridDb
                     {
                         var preparedCommand = Switch<(string sql, object param)>.On(command)
                             .Match<Insert>(insert => ($@"
-                                insert into [Documents] (Id, Etag, Document) 
-                                values (@Key, @Document);",
+                                insert into [Documents] (Id, Etag, Operation, Metadata, Document)
+                                values (@Key, @Etag, @Operation, @Metadata, @Document);",
                                 new
                                 {
                                     insert.Key,
+                                    Etag = etag,
+                                    Operation = Operation.Inserted,
+                                    Metadata = "{}",
                                     insert.Document
                                 }))
                             .OrThrow();
 
-                        var rowcount = await connection.ExecuteAsync(preparedCommand.Item1, preparedCommand.Item2);
+                        var rowcount = await connection.ExecuteAsync(preparedCommand.sql, preparedCommand.param, tx);
 
                         if (rowcount != 1)
                         {
-                            throw new ConcurrencyException(
-                                $"Someone beat you to it. Expected one change, but got {rowcount}. " +
-                                $"The transaction is rolled back now, so no changes was actually made.");
+                            throw new ConcurrencyException($@"
+                                Someone beat you to it. Expected one change, but got {rowcount}.
+                                The transaction is rolled back now, so no changes was actually made.");
                         }
                     }
 
@@ -129,7 +149,24 @@ namespace HybridDb
             }
         }
 
-        public Task<QueryResult> Get(string key) => throw new NotImplementedException();
+        public async Task<QueryResult> Get(string key)
+        {
+            using (var connection = new SqlConnection(ConnectionString))
+            {
+                connection.Open();
+
+                using (var tx = connection.BeginTransaction(IsolationLevel.RepeatableRead))
+                {
+                    var row = await connection.QuerySingleOrDefaultAsync<QueryResult>(
+                        "select Id, Metadata, Document from [Documents] where Id = @Id", 
+                        new { Id = key }, tx);
+
+                    tx.Commit();
+
+                    return row;
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -210,15 +247,15 @@ namespace HybridDb
 
     public class QueryResult
     {
-        public QueryResult(string key, Dictionary<string, string[]> metadata, string document)
+        public QueryResult(string id, string metadata, string document)
         {
-            Key = key;
+            Id = id;
             Metadata = metadata;
             Document = document;
         }
 
-        public string Key { get; }
-        public Dictionary<string, string[]> Metadata { get; }
+        public string Id { get; }
+        public string Metadata { get; }
         public string Document { get; }
     }
 

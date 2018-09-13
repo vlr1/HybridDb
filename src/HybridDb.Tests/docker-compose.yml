@@ -1,0 +1,24 @@
+version: '3'
+services:
+  initdb:
+    image: microsoft/mssql-server-windows-developer
+    command:
+      # - c:\sql\copy-database.bat
+      # sqlcmd -S db.local,1433 -U developer -P password -Q "BACKUP DATABASE [EnergyProjects-Template-4.0] TO DISK='c:\temp\ep.bak'" &&
+      # sqlcmd -S sqlserver,1433 -U sa -P Qalid4wiro! -Q "CREATE DATABASE EnergyProjects"
+      # sqlcmd -S sqlserver,1433 -U sa -P Qalid4wiro! -Q "ALTER DATABASE EnergyProjects SET SINGLE_USER WITH ROLLBACK AFTER 60"
+      # sqlcmd -S sqlserver,1433 -U sa -P Qalid4wiro! -Q "RESTORE DATABASE EnergyProjects FROM DISK='c:\mydb.bak WITH MOVE 'mydb_Data' TO 'C:\SQLData\PIDataCopy_Data', MOVE 'mydb_Log' TO 'C:\SQLData\PIDataCopy_Log', RECOVERY,REPLACE"
+      # sqlcmd -S sqlserver,1433 -U sa -P Qalid4wiro! -Q "ALTER DATABASE EnergyProjects SET MULTI_USER"
+    volumes:
+      - ./sql:c:\sql
+    depends_on:
+      - sqlserver
+  sqlserver:
+    image: microsoft/mssql-server-windows-developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - .:c:\sql
+    environment:
+      - sa_password=Qalid4wiro!
+      - ACCEPT_EULA=Y
