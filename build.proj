@@ -113,9 +113,7 @@
 
 	<Target Name="Deploy" DependsOnTargets="ValidateGitStatus;Test;Pack">
 		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.$(Version).nupkg"/>
-    <Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.NewtonsoftJson.$(Version).nupkg"/>
-    <Exec Command="git tag $(Version)" />
-    <Message Text="Tagged commit with tag '%VERSION%' - push tags to origin with 'git push --tags'" />
+	    <Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.NewtonsoftJson.$(Version).nupkg"/>
 	</Target>	
 	
 </Project>

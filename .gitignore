@@ -109,3 +109,5 @@ UpgradeLog*.XML
 
 # Merged output
 Build/*
+
+.vs/
