@@ -111,9 +111,9 @@
     <Exec Command="$(NuGet) pack $(OutputFolder)\HybridDb.NewtonsoftJson.nuspec -OutputDirectory $(OutputFolder)"/>
 	</Target>
 
-	<Target Name="Deploy" DependsOnTargets="ValidateGitStatus;Test;Pack">
-		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.$(Version).nupkg"/>
-	    <Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.NewtonsoftJson.$(Version).nupkg"/>
+	<Target Name="Deploy" DependsOnTargets="Pack">
+		<Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.$(Version).nupkg -Source https://api.nuget.org/v3/index.json"/>
+	    <Exec Command="$(NuGet) push $(OutputFolder)\HybridDb.NewtonsoftJson.$(Version).nupkg -Source https://api.nuget.org/v3/index.json"/>
 	</Target>	
 	
 </Project>

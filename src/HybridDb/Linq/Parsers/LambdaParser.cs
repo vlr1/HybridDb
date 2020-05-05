@@ -134,6 +134,11 @@ namespace HybridDb.Linq.Parsers
 
         protected override Expression VisitNewArray(NewArrayExpression expression)
         {
+            if (expression.NodeType == ExpressionType.NewArrayBounds)
+            {
+                throw new NotSupportedException("Does not support NewArrayBounds nodes.");
+            }
+
             var items = new object[expression.Expressions.Count];
             for (var i = 0; i < expression.Expressions.Count; i++)
             {
