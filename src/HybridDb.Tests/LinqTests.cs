@@ -522,17 +522,23 @@ namespace HybridDb.Tests
         }
 
         [Fact]
-        public void CanQueryWhereWithInEmptyArray()
+        public void CanQueryWhereWithInEmptyArray_NewArrayBounds_NotSupported()
         {
-            var translation = Query<Entity>().Where(x => x.Id.In()).Translate();
+            Should.Throw<NotSupportedException>(() => Query<Entity>().Where(x => x.Id.In(new Guid[0])).Translate());
+        }
+
+        [Fact]
+        public void CanQueryWhereWithInEmptyArray_NewArrayInit()
+        {
+            var translation = Query<Entity>().Where(x => x.Id.In(new Guid[] {})).Translate();
             translation.Where.ShouldBe("(@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
 
         [Fact]
-        public void CanQueryWhereWithNotInEmptyArray()
+        public void CanQueryWhereWithNotInEmptyArray_NewArrayInit()
         {
-            var translation = Query<Entity>().Where(x => !x.Id.In()).Translate();
+            var translation = Query<Entity>().Where(x => !x.Id.In(new Guid[] { })).Translate();
             translation.Where.ShouldBe(" NOT (@Value0 <> @Value0)");
             translation.Parameters.ShouldContainKeyAndValue("@Value0", 1);
         }
