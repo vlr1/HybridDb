@@ -27,8 +27,9 @@ namespace HybridDb.Tests
             var translation = Query<Entity>().Translate();
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("");
-            translation.Take.ShouldBe(0);
-            translation.Skip.ShouldBe(0);
+            var skipTake = translation.Window.ShouldBeOfType<SkipTake>();
+            skipTake.Take.ShouldBe(0);
+            skipTake.Skip.ShouldBe(0);
         }
 
         [Fact]
@@ -394,8 +395,9 @@ namespace HybridDb.Tests
         public void CanQueryWithSkipAndTake()
         {
             var translation = Query<Entity>().Skip(1).Take(1).Translate();
-            translation.Skip.ShouldBe(1);
-            translation.Take.ShouldBe(1);
+            var skipTake = translation.Window.ShouldBeOfType<SkipTake>();
+            skipTake.Skip.ShouldBe(1);
+            skipTake.Take.ShouldBe(1);
         }
 
         [Fact]

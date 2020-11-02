@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Dapper;
@@ -24,7 +26,7 @@ namespace HybridDb
             Configuration = configuration;
         }
 
-        internal DocumentStore(DocumentStore store, Configuration configuration) : this(store.Database, configuration) {         }
+        internal DocumentStore(DocumentStore store, Configuration configuration) : this(store.Database, configuration) { }
 
         public static IDocumentStore Create(string connectionString, IHybridDbConfigurator configurator = null)
         {
@@ -125,16 +127,15 @@ namespace HybridDb
                 connectionManager.Complete();
 
                 Logger.Debug("Executed {0} inserts, {1} updates and {2} deletes in {3}ms",
-                            numberOfInsertCommands,
-                            numberOfUpdateCommands,
-                            numberOfDeleteCommands,
-                            timer.ElapsedMilliseconds);
+                    numberOfInsertCommands,
+                    numberOfUpdateCommands,
+                    numberOfDeleteCommands,
+                    timer.ElapsedMilliseconds);
 
                 lastWrittenEtag = etag;
                 return etag;
             }
         }
-
 
         void InternalExecute(ManagedConnection managedConnection, string sql, List<Parameter> parameters, int expectedRowCount)
         {
@@ -147,82 +148,101 @@ namespace HybridDb
 
         public IEnumerable<TProjection> Query<TProjection>(
             DocumentTable table, out QueryStats stats, string select = null, string where = "",
-            int skip = 0, int take = 0, string orderby = "", object parameters = null)
+            Window window = null, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
                 select = "";
 
-            var projectToDictionary = typeof (TProjection).IsA<IDictionary<string, object>>();
-            if (!projectToDictionary)
+            if (!typeof(TProjection).IsA<IDictionary<string, object>>())
+            {
                 select = MatchSelectedColumnsWithProjectedType<TProjection>(select);
+            }
+
+            IEnumerable<TProjection> result = new List<TProjection>();
 
             var timer = Stopwatch.StartNew();
             using (var connection = Database.Connect())
             {
                 var sql = new SqlBuilder();
 
-                sql.Append("select count(*) as TotalResults")
-                   .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                   .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                   .Append(";");
+                var isWindowed = window != null;
 
-                var isWindowed = skip > 0 || take > 0;
+                stats = new QueryStats();
+                result = new List<TProjection>();
 
                 if (isWindowed)
                 {
-                    sql.Append(@"with temp as (select *")
-                       .Append(", row_number() over(ORDER BY {0}) as RowNumber", string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                       .Append(")")
-                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
-                       .Append("where RowNumber >= {0}", skip + 1)
-                       .Append(take > 0, "and RowNumber <= {0}", skip + take)
-                       .Append("order by RowNumber");
+                    sql.Append("select count(*) as TotalResults")
+                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where);
+
+                    sql.Append(@"; with WithRowNumber as (select *")
+                        .Append($", row_number() over(ORDER BY {(string.IsNullOrEmpty(@orderby) ? "CURRENT_TIMESTAMP" : @orderby)})-1 as RowNumber")
+                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                        .Append(")");
+
+                    var skipTake = window as SkipTake;
+                    if (skipTake != null)
+                    {
+                        var skip = skipTake.Skip;
+                        var take = skipTake.Take;
+
+                        sql.Append("select {0} from WithRowNumber", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
+                            .Append("where RowNumber >= {0}", skip)
+                            .Append(take > 0, "and RowNumber < {0}", skip + take)
+                            .Append("order by RowNumber");
+                    }
+
+                    var skipToId = window as SkipToId;
+                    if (skipToId != null)
+                    {
+                        sql.Append("select {0}", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
+                            .Append("from WithRowNumber")
+                            .Append($"where RowNumber >= (select RowNumber - (RowNumber % {skipToId.PageSize}) from WithRowNumber where Id=@__Id)")
+                            .Append($"and RowNumber < (select RowNumber - (RowNumber % {skipToId.PageSize}) from WithRowNumber where Id=@__Id) + {skipToId.PageSize}")
+                            .Append("order by RowNumber");
+
+                        sql.Parameters.Add(new Parameter { Name = "@__Id", DbType = DbType.Guid, Value = skipToId.Id });
+                    }
+
+                    var internalResult = InternalQuery(connection, sql, parameters, reader => new
+                    {
+                        Stats = reader.Read<QueryStats>(buffered: true).Single(),
+                        Rows = HeyHo<TProjection>(reader)
+                    });
+
+                    result = internalResult.Rows.Select(x => x.Data);
+
+                    stats = new QueryStats
+                    {
+                        TotalResults = internalResult.Stats.TotalResults,
+                        RetrievedResults = internalResult.Rows.Count(),
+                        FirstRowNumberOfWindow = internalResult.Rows.FirstOrDefault()?.RowNumber ?? 0
+                    };
                 }
                 else
                 {
-                    sql.Append(@"with temp as (select *")
-                       .Append(", 0 as RowNumber")
+                    sql.Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, 0 as RowNumber")
                        .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                       .Append(")")
-                       .Append("select {0} from temp", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                        .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
-                }
-                
-                IEnumerable<TProjection> result;
-                if (projectToDictionary)
-                {
-                    result = (IEnumerable<TProjection>)
-                        InternalQuery<object>(connection, sql, parameters, out stats)
-                            .Cast<IDictionary<string, object>>();
-                }
-                else
-                {
-                    result = InternalQuery<TProjection>(connection, sql, parameters, out stats);
+
+                    result = InternalQuery(connection, sql, parameters, HeyHo<TProjection>).Select(x => x.Data);
+
+                    stats = new QueryStats();
+                    stats.TotalResults = stats.RetrievedResults = result.Count();
+                    stats.FirstRowNumberOfWindow = 0;
                 }
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;
-
-                if (isWindowed)
-                {
-                    var potential = stats.TotalResults - skip;
-                    if (potential < 0)
-                        potential = 0;
-
-                    stats.RetrievedResults = take > 0 && potential > take ? take : potential;
-                }
-                else
-                {
-                    stats.RetrievedResults = stats.TotalResults;
-                }
 
                 Interlocked.Increment(ref numberOfRequests);
 
                 Logger.Debug("Retrieved {0} of {1} in {2}ms", stats.RetrievedResults, stats.TotalResults, stats.QueryDurationInMilliseconds);
 
                 connection.Complete();
+
                 return result;
             }
         }
@@ -230,13 +250,13 @@ namespace HybridDb
         static string MatchSelectedColumnsWithProjectedType<TProjection>(string select)
         {
             var neededColumns = typeof(TProjection).GetProperties().Select(x => x.Name).ToList();
-            var selectedColumns = 
-                from clause in @select.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            var selectedColumns =
+                from clause in @select.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
                 let split = Regex.Split(clause, " AS ", RegexOptions.IgnoreCase).Where(x => x != "").ToArray()
                 let column = split[0]
                 let alias = split.Length > 1 ? split[1] : null
                 where neededColumns.Contains(alias)
-                select new { column, alias = alias ?? column };
+                select new {column, alias = alias ?? column};
 
             var missingColumns =
                 from column in neededColumns
@@ -247,6 +267,45 @@ namespace HybridDb
             return select;
         }
 
+        T InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, Func<SqlMapper.GridReader, T> read)
+        {
+            var p0 = parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters);
+            var p1 = sql.Parameters;
+
+            var normalizedParameters = new FastDynamicParameters(p0.Concat(p1));
+
+            using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
+            {
+                return read(reader);
+            }
+        }
+
+        public IEnumerable<Row<T>> HeyHo<T>(SqlMapper.GridReader reader)
+        {
+            if (typeof(T).IsA<IDictionary<string, object>>())
+            {
+                var enumerable = reader
+                    .Read<object, dynamic, Row<IDictionary<string, object>>>((first, second) => CreateRow((IDictionary<string, object>)first, (int)second.RowNumber), "RowNumber", buffered: true);
+                return (IEnumerable<Row<T>>)enumerable;
+            }
+
+            return reader.Read<T, int, Row<T>>(CreateRow, "RowNumber", buffered: true);
+        }
+
+        public static Row<T> CreateRow<T>(T data, int rowNumber) => new Row<T>(data, rowNumber);
+
+        public class Row<T>
+        {
+            public Row(T data, int rowNumber)
+            {
+                Data = data;
+                RowNumber = rowNumber;
+            }
+
+            public T Data { get; set; }
+            public int RowNumber { get; set; }
+        }
+
         IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats stats)
         {
             var normalizedParameters = new FastDynamicParameters(
@@ -255,15 +314,21 @@ namespace HybridDb
             using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
             {
                 stats = reader.Read<QueryStats>(buffered: true).Single();
+
+                if (typeof(T).IsA<IDictionary<string, object>>())
+                {
+                    return (IEnumerable<T>) reader
+                        .Read<object, object, object>((first, second) => first, "RowNumber", buffered: true)
+                        .Cast<IDictionary<string, object>>();
+                }
+
                 return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
             }
         }
 
-        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters)
-        {
-            return from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
-                   select new Parameter { Name = "@" + projection.Key, Value = projection.Value };
-        }
+        static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
+            from projection in parameters as IDictionary<string, object> ?? ObjectToDictionaryRegistry.Convert(parameters)
+            select new Parameter {Name = "@" + projection.Key, Value = projection.Value};
 
         public IDictionary<string, object> Get(DocumentTable table, Guid key)
         {
@@ -274,7 +339,7 @@ namespace HybridDb
                     Database.FormatTableNameAndEscape(table.Name),
                     table.IdColumn.Name);
 
-                var row = ((IDictionary<string, object>)connection.Connection.Query(sql, new { Id = key }).SingleOrDefault());
+                var row = ((IDictionary<string, object>) connection.Connection.Query(sql, new {Id = key}).SingleOrDefault());
 
                 Interlocked.Increment(ref numberOfRequests);
 
@@ -285,7 +350,6 @@ namespace HybridDb
                 return row;
             }
         }
-
 
         public long NumberOfRequests
         {

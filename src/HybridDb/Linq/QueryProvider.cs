@@ -98,8 +98,7 @@ namespace HybridDb.Linq
                     design.Table, out storeStats,
                     translation.Select,
                     translation.Where,
-                    translation.Skip,
-                    translation.Take,
+                    translation.Window,
                     translation.OrderBy,
                     translation.Parameters)
                     .Select(result => session.ConvertToEntityAndPutUnderManagement(design, result))
@@ -118,8 +117,7 @@ namespace HybridDb.Linq
                     table, out storeStats,
                     translation.Select,
                     translation.Where,
-                    translation.Skip,
-                    translation.Take,
+                    translation.Window,
                     translation.OrderBy,
                     translation.Parameters);
 

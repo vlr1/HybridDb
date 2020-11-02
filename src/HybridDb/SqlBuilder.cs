@@ -45,10 +45,7 @@ namespace HybridDb
             previousPredicate = null;
         }
 
-        public IEnumerable<Parameter> Parameters
-        {
-            get { return parameters; }
-        }
+        public List<Parameter> Parameters => parameters;
 
         public SqlBuilder Append(string sql, params object[] args)
         {

@@ -47,7 +47,7 @@ namespace HybridDb.Migrations
                         .Query(table, out stats,
                             @where: "AwaitsReprojection = @AwaitsReprojection or Version < @version",
                             @select: "Id, AwaitsReprojection, Version, Discriminator, Etag",
-                            take: 100,
+                            window: new SkipTake(0, 100),
                             @orderby: "newid()",
                             parameters: new {AwaitsReprojection = true, version = configuration.ConfiguredVersion})
                         .ToList();

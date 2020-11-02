@@ -35,21 +35,21 @@ namespace HybridDb.Tests.Performance
         [Fact]
         public void QueryWithWindow()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500))
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, window: new SkipTake(200, 500)))
                 .DbTimeLowest.ShouldBeLessThan(3);
         }
 
         [Fact]
         public void QueryWithLateWindow()
         {
-            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 9500, take: 500))
+            Time((out QueryStats stats) => store.Query(store.Configuration.GetDesignFor<Entity>().Table, out stats, window: new SkipTake(9500, 500)))
                 .DbTimeLowest.ShouldBeLessThan(4);
         }
 
         [Fact]
         public void QueryWithWindowMaterializedToProjection()
         {
-            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, skip: 200, take: 500).ToList())
+            Time((out QueryStats stats) => store.Query<Entity>(store.Configuration.GetDesignFor<Entity>().Table, out stats, window: new SkipTake(200, 500)).ToList())
                 .TotalTimeLowest.ShouldBeLessThan(20);
         }
 

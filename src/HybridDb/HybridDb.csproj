@@ -186,6 +186,7 @@
     <Compile Include="TableNotFoundException.cs" />
     <Compile Include="TypeEx.cs" />
     <Compile Include="Commands\UpdateCommand.cs" />
+    <Compile Include="Window.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Migrations\packages.config" />
