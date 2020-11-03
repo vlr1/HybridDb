@@ -167,9 +167,6 @@ namespace HybridDb
 
                 var isWindowed = window != null;
 
-                stats = new QueryStats();
-                result = new List<TProjection>();
-
                 if (isWindowed)
                 {
                     sql.Append("select count(*) as TotalResults")
@@ -209,7 +206,7 @@ namespace HybridDb
                     var internalResult = InternalQuery(connection, sql, parameters, reader => new
                     {
                         Stats = reader.Read<QueryStats>(buffered: true).Single(),
-                        Rows = HeyHo<TProjection>(reader)
+                        Rows = ReadRow<TProjection>(reader)
                     });
 
                     result = internalResult.Rows.Select(x => x.Data);
@@ -228,7 +225,7 @@ namespace HybridDb
                        .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
                        .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
-                    result = InternalQuery(connection, sql, parameters, HeyHo<TProjection>).Select(x => x.Data);
+                    result = InternalQuery(connection, sql, parameters, ReadRow<TProjection>).Select(x => x.Data);
 
                     stats = new QueryStats();
                     stats.TotalResults = stats.RetrievedResults = result.Count();
@@ -280,50 +277,35 @@ namespace HybridDb
             }
         }
 
-        public IEnumerable<Row<T>> HeyHo<T>(SqlMapper.GridReader reader)
+        public IEnumerable<Row<T>> ReadRow<T>(SqlMapper.GridReader reader)
         {
             if (typeof(T).IsA<IDictionary<string, object>>())
             {
-                var enumerable = reader
-                    .Read<object, dynamic, Row<IDictionary<string, object>>>((first, second) => CreateRow((IDictionary<string, object>)first, (int)second.RowNumber), "RowNumber", buffered: true);
-                return (IEnumerable<Row<T>>)enumerable;
+                return (IEnumerable<Row<T>>)reader
+                    .Read<object, RowExtras, Row<IDictionary<string, object>>>((a, b) => 
+                        CreateRow((IDictionary<string, object>)a, b), "RowNumber", buffered: true);
             }
 
-            return reader.Read<T, int, Row<T>>(CreateRow, "RowNumber", buffered: true);
+            return reader.Read<T, RowExtras, Row<T>>(CreateRow, "RowNumber", buffered: true);
         }
 
-        public static Row<T> CreateRow<T>(T data, int rowNumber) => new Row<T>(data, rowNumber);
+        public static Row<T> CreateRow<T>(T data, RowExtras extras) => new Row<T>(data, extras);
+
+        public class RowExtras
+        {
+            public int RowNumber { get; set; }
+        }
 
         public class Row<T>
         {
-            public Row(T data, int rowNumber)
+            public Row(T data, RowExtras extras)
             {
                 Data = data;
-                RowNumber = rowNumber;
+                RowNumber = extras.RowNumber;
             }
 
             public T Data { get; set; }
             public int RowNumber { get; set; }
-        }
-
-        IEnumerable<T> InternalQuery<T>(ManagedConnection connection, SqlBuilder sql, object parameters, out QueryStats stats)
-        {
-            var normalizedParameters = new FastDynamicParameters(
-                parameters as IEnumerable<Parameter> ?? ConvertToParameters<T>(parameters));
-
-            using (var reader = connection.Connection.QueryMultiple(sql.ToString(), normalizedParameters))
-            {
-                stats = reader.Read<QueryStats>(buffered: true).Single();
-
-                if (typeof(T).IsA<IDictionary<string, object>>())
-                {
-                    return (IEnumerable<T>) reader
-                        .Read<object, object, object>((first, second) => first, "RowNumber", buffered: true)
-                        .Cast<IDictionary<string, object>>();
-                }
-
-                return reader.Read<T, object, T>((first, second) => first, "RowNumber", buffered: true);
-            }
         }
 
         static IEnumerable<Parameter> ConvertToParameters<T>(object parameters) =>
