@@ -22,7 +22,16 @@ namespace HybridDb.Linq
         {
             return list.Contains(property);
         }
-        
+
+        public static IQueryable<T> SkipToId<T>(this IQueryable<T> query, Guid id, int pageSize) =>
+            query.Provider.CreateQuery<T>(
+                Expression.Call(typeof(QueryableEx)
+                        .GetMethod(nameof(SkipToId))
+                        .MakeGenericMethod(typeof(T)),
+                    query.Expression,
+                    Expression.Constant(id),
+                    Expression.Constant(pageSize)));
+
         public static T Column<T>(this object parameter, string name)
         {
             throw new NotSupportedException("Only for building LINQ expressions");

@@ -278,7 +278,7 @@ namespace HybridDb.Tests
                               where method.Name == "Query" && method.IsGenericMethod
                               select method).Single().MakeGenericMethod(t.GetType());
 
-            var rows = (IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, null, "Field = @name", null, "", new {name = "Asger"}});
+            var rows = (IEnumerable<dynamic>) methodInfo.Invoke(store, new object[] {table.Table, stats, false, null, "Field = @name", null, "", new {name = "Asger"}});
 
             rows.Count().ShouldBe(1);
             Assert.Equal("Asger", rows.Single().Field);
@@ -589,6 +589,61 @@ namespace HybridDb.Tests
             stats.TotalResults.ShouldBe(17);
             stats.RetrievedResults.ShouldBe(expected.Length);
             stats.FirstRowNumberOfWindow.ShouldBe(expected[0]);
+        }
+
+        [Theory]
+        [InlineData(0, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(2, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(3, 0, new[] { 0, 2, 4, 6, 8 })]
+        [InlineData(10, 5, new[] { 10, 12, 14, 16 })]
+        [InlineData(11, 0, new[] { 0, 2, 4, 6, 8 })]
+        public void CanSkipToId_Where(int index, int firstRowOfWindow, int[] expected)
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var ids = new List<Guid>();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 17; i++)
+            {
+                var id = Guid.NewGuid();
+                ids.Add(id);
+                store.Insert(table.Table, id, new { Number = i });
+            }
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, where: "Number % 2 = 0", window: new SkipToId(ids[index], 5), orderby: "Number").ToList();
+
+            result.Select(x => (int)x[table.Table["Number"]])
+                .ShouldBe(expected);
+
+            stats.TotalResults.ShouldBe(9);
+            stats.RetrievedResults.ShouldBe(expected.Length);
+            stats.FirstRowNumberOfWindow.ShouldBe(firstRowOfWindow);
+        }
+
+        [Fact]
+        public void CanSkipToId_Where_NoResults()
+        {
+            Document<Entity>().With(x => x.Number);
+
+            var ids = new List<Guid>();
+            var table = store.Configuration.GetDesignFor<Entity>();
+            for (var i = 0; i < 17; i++)
+            {
+                var id = Guid.NewGuid();
+                ids.Add(id);
+                store.Insert(table.Table, id, new { Number = i });
+            }
+
+            QueryStats stats;
+            var result = store.Query(table.Table, out stats, where: "Number = -1", window: new SkipToId(ids[0], 5), orderby: "Number").ToList();
+
+            result.Select(x => (int)x[table.Table["Number"]])
+                .ShouldBeEmpty();
+
+            stats.TotalResults.ShouldBe(0);
+            stats.RetrievedResults.ShouldBe(0);
+            stats.FirstRowNumberOfWindow.ShouldBe(0);
         }
 
         [Fact]

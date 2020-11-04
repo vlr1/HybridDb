@@ -4,6 +4,7 @@ namespace HybridDb.Linq
 {
     public class Translation
     {
+        public bool Top1 { get; set; }
         public string Select { get; set; }
         public string Where { get; set; }
         public Window Window { get; set; }

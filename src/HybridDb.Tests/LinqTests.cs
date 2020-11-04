@@ -25,11 +25,10 @@ namespace HybridDb.Tests
         public void CanQueryAll()
         {
             var translation = Query<Entity>().Translate();
+            translation.Top1.ShouldBe(false);
             translation.Select.ShouldBe("");
             translation.Where.ShouldBe("");
-            var skipTake = translation.Window.ShouldBeOfType<SkipTake>();
-            skipTake.Take.ShouldBe(0);
-            skipTake.Skip.ShouldBe(0);
+            translation.Window.ShouldBe(null);
         }
 
         [Fact]
@@ -398,6 +397,16 @@ namespace HybridDb.Tests
             var skipTake = translation.Window.ShouldBeOfType<SkipTake>();
             skipTake.Skip.ShouldBe(1);
             skipTake.Take.ShouldBe(1);
+        }
+
+        [Fact]
+        public void CanQueryWithSkipToId()
+        {
+            var id = Guid.NewGuid();
+            var translation = Query<Entity>().SkipToId(id, 5).Translate();
+            var skipToId = translation.Window.ShouldBeOfType<SkipToId>();
+            skipToId.Id.ShouldBe(id);
+            skipToId.PageSize.ShouldBe(5);
         }
 
         [Fact]

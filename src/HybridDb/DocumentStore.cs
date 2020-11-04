@@ -147,7 +147,7 @@ namespace HybridDb
         }
 
         public IEnumerable<TProjection> Query<TProjection>(
-            DocumentTable table, out QueryStats stats, string select = null, string where = "",
+            DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", object parameters = null)
         {
             if (select.IsNullOrEmpty() || select == "*")
@@ -185,7 +185,7 @@ namespace HybridDb
                         var skip = skipTake.Skip;
                         var take = skipTake.Take;
 
-                        sql.Append("select {0} from WithRowNumber", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
+                        sql.Append("select {0} {1} from WithRowNumber", top1 ? "top 1" : "", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                             .Append("where RowNumber >= {0}", skip)
                             .Append(take > 0, "and RowNumber < {0}", skip + take)
                             .Append("order by RowNumber");
@@ -194,10 +194,10 @@ namespace HybridDb
                     var skipToId = window as SkipToId;
                     if (skipToId != null)
                     {
-                        sql.Append("select {0}", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
+                        sql.Append("select {0} {1}", top1 ? "top 1" : "", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                             .Append("from WithRowNumber")
-                            .Append($"where RowNumber >= (select RowNumber - (RowNumber % {skipToId.PageSize}) from WithRowNumber where Id=@__Id)")
-                            .Append($"and RowNumber < (select RowNumber - (RowNumber % {skipToId.PageSize}) from WithRowNumber where Id=@__Id) + {skipToId.PageSize}")
+                            .Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as RowNumber from WithRowNumber where Id=@__Id union all select 0 as RowNumber) as x)")
+                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as RowNumber from WithRowNumber where Id=@__Id union all select 0 as RowNumber) as x) + {skipToId.PageSize}")
                             .Append("order by RowNumber");
 
                         sql.Parameters.Add(new Parameter { Name = "@__Id", DbType = DbType.Guid, Value = skipToId.Id });
@@ -220,16 +220,45 @@ namespace HybridDb
                 }
                 else
                 {
-                    sql.Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, 0 as RowNumber")
-                       .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
-                       .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
-                       .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+                    if (top1)
+                    {
+                        sql.Append("select count(*) as TotalResults")
+                            .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                            .Append(!string.IsNullOrEmpty(@where), "where {0}", @where);
 
-                    result = InternalQuery(connection, sql, parameters, ReadRow<TProjection>).Select(x => x.Data);
+                        sql.Append($"select top 1 {(select.IsNullOrEmpty() ? " * " : select)}, 0 as RowNumber")
+                            .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                            .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                            .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
 
-                    stats = new QueryStats();
-                    stats.TotalResults = stats.RetrievedResults = result.Count();
-                    stats.FirstRowNumberOfWindow = 0;
+                        var internalResult = InternalQuery(connection, sql, parameters, reader => new
+                        {
+                            Stats = reader.Read<QueryStats>(buffered: true).Single(),
+                            Rows = ReadRow<TProjection>(reader)
+                        });
+
+                        result = internalResult.Rows.Select(x => x.Data);
+
+                        stats = new QueryStats
+                        {
+                            TotalResults = internalResult.Stats.TotalResults,
+                            RetrievedResults = internalResult.Rows.Count(),
+                            FirstRowNumberOfWindow = 0
+                        };
+                    }
+                    else
+                    {
+                        sql.Append($"select {(select.IsNullOrEmpty() ? " * " : select)}, 0 as RowNumber")
+                            .Append("from {0}", Database.FormatTableNameAndEscape(table.Name))
+                            .Append(!string.IsNullOrEmpty(@where), "where {0}", @where)
+                            .Append(!string.IsNullOrEmpty(orderby), "order by {0}", orderby);
+
+                        result = InternalQuery(connection, sql, parameters, ReadRow<TProjection>).Select(x => x.Data);
+
+                        stats = new QueryStats();
+                        stats.TotalResults = stats.RetrievedResults = result.Count();
+                        stats.FirstRowNumberOfWindow = 0;
+                    }
                 }
 
                 stats.QueryDurationInMilliseconds = timer.ElapsedMilliseconds;

@@ -46,7 +46,7 @@ namespace HybridDb.Linq
         }
 
         public IEnumerable<TProjection> ExecuteEnumerable<TProjection>(Expression expression)
-        {
+        { 
             return ExecuteQuery<TProjection>(expression).Results;
         }
 
@@ -96,6 +96,7 @@ namespace HybridDb.Linq
                 QueryStats storeStats;
                 var results = store.Query(
                     design.Table, out storeStats,
+                    translation.Top1,
                     translation.Select,
                     translation.Where,
                     translation.Window,
@@ -115,6 +116,7 @@ namespace HybridDb.Linq
                 QueryStats storeStats;
                 var results = store.Query<TProjection>(
                     table, out storeStats,
+                    translation.Top1,
                     translation.Select,
                     translation.Where,
                     translation.Window,

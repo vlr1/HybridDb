@@ -10,6 +10,9 @@
         public void CopyTo(QueryStats target)
         {
             target.TotalResults = TotalResults;
+            target.RetrievedResults = RetrievedResults;
+            target.FirstRowNumberOfWindow = FirstRowNumberOfWindow;
+            target.QueryDurationInMilliseconds = QueryDurationInMilliseconds;
         }
     }
 }

@@ -33,7 +33,8 @@ namespace HybridDb.Linq.Parsers
                 Select = selectSql.ToString(),
                 Where = whereSql.ToString(),
                 OrderBy = orderBySql.ToString(),
-                Window = new SkipTake(queryVisitor.Skip, queryVisitor.Take),
+                Top1 = queryVisitor.Top1,
+                Window = queryVisitor.Window,
                 Parameters = parameters.ToDictionary(x => x.Value, x => x.Key),
                 ExecutionMethod = queryVisitor.Execution
             };

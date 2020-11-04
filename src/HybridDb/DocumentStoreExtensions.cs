@@ -27,8 +27,8 @@ namespace HybridDb
             return store.Execute(commands);
         }
 
-        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, DocumentTable table, out QueryStats stats, string select = null, string where = "",
+        public static IEnumerable<IDictionary<string, object>> Query(this IDocumentStore store, DocumentTable table, out QueryStats stats, bool top1 = false, string select = null, string where = "",
             Window window = null, string orderby = "", object parameters = null) =>
-            store.Query<IDictionary<string, object>>(table, out stats, @select, @where, window, @orderby, parameters);
+            store.Query<IDictionary<string, object>>(table, out stats, top1, @select, @where, window, @orderby, parameters);
     }
 }

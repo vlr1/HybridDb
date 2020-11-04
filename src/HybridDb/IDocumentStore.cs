@@ -14,6 +14,6 @@ namespace HybridDb
         IDocumentSession OpenSession();
         Guid Execute(IEnumerable<DatabaseCommand> commands);
         IDictionary<string, object> Get(DocumentTable table, Guid key);
-        IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, string select = "", string where = "", Window window = null, string orderby = "", object parameters = null);
+        IEnumerable<TProjection> Query<TProjection>(DocumentTable table, out QueryStats stats, bool top1 = false, string select = "", string where = "", Window window = null, string orderby = "", object parameters = null);
     }
 }
