@@ -38,7 +38,7 @@ namespace HybridDb.Migrations
 
                 new CreateTable(metadata).Execute(database);
 
-                var currentSchemaVersion = database.RawQuery<int>(
+                int currentSchemaVersion = database.RawQuery<int>(
                     string.Format("select top 1 SchemaVersion from {0} with (tablockx, holdlock)", 
                         database.FormatTableName("HybridDb"))).SingleOrDefault();
 
@@ -73,7 +73,10 @@ namespace HybridDb.Migrations
                     logger.Information("Skips provided migrations when not using real tables.");
                 }
 
-                var schema = database.QuerySchema().Values.ToList(); // demeter go home!
+                var schema = currentSchemaVersion > 0
+                    ? database.QuerySchema().Values.ToList()
+                    : new List<Table>();
+
                 var commands = differ.CalculateSchemaChanges(schema, configuration);
 
                 if (commands.Any())
