@@ -195,8 +195,8 @@ namespace HybridDb
                     {
                         sql.Append("select {0} {1}", top1 ? "top 1" : "", select.IsNullOrEmpty() ? "*" : select + ", RowNumber")
                             .Append("from WithRowNumber")
-                            .Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as RowNumber from WithRowNumber where Id=@__Id union all select 0 as RowNumber) as x)")
-                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as RowNumber from WithRowNumber where Id=@__Id union all select 0 as RowNumber) as x) + {skipToId.PageSize}")
+                            .Append($"where RowNumber >= (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc)")
+                            .Append($"and RowNumber < (select top 1 * from (select RowNumber - (RowNumber % {skipToId.PageSize}) as FirstRow from WithRowNumber where Id=@__Id union all select 0 as FirstRow) as x order by FirstRow desc) + {skipToId.PageSize}")
                             .Append("order by RowNumber");
 
                         sql.Parameters.Add(new Parameter { Name = "@__Id", DbType = DbType.Guid, Value = skipToId.Id });

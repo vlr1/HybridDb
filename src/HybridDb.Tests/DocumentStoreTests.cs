@@ -558,7 +558,7 @@ namespace HybridDb.Tests
         }
 
         [Theory]
-        [InlineData(0, new[] { 0, 1, 2, 3, 4  })]
+        [InlineData(0, new[] { 0, 1, 2, 3, 4 })]
         [InlineData(3, new[] { 0, 1, 2, 3, 4 })]
         [InlineData(4, new[] { 0, 1, 2, 3, 4 })]
         [InlineData(5, new[] { 5, 6, 7, 8, 9 })]
