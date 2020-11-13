@@ -20,7 +20,7 @@ namespace HybridDb.Config
 
             Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.ColoredConsole()
+                .WriteTo.Console()
                 .CreateLogger();
 
             Serializer = new DefaultSerializer();
